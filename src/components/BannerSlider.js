@@ -22,7 +22,6 @@ const BannerSlider = () => {
       try {
         const res = await axios.get(SummaryApi.get_banner.url);
         if (res.data.success) {
-          console.log("✅ API Success:", res.data);
           dispatch(setBanarList(res.data.data));
           setBanners(res.data.data); // ✅ only array
         }
@@ -53,7 +52,7 @@ const BannerSlider = () => {
         });
         setCurrentIndex(nextIndex);
       }
-    }, 4000); // auto-slide every 3 sec
+    }, 3000); // auto-slide every 3 sec
 
     return () => clearInterval(interval);
   }, [currentIndex, banners]);
@@ -64,7 +63,7 @@ const BannerSlider = () => {
       style={styles.bannerImage}
     />
   );
-  console.log("✅ Banners:", banners);
+  // console.log("✅ Banners:", banners);
 
   return (
     <View>

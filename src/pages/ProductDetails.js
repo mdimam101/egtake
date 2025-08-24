@@ -28,7 +28,8 @@ import ImageWithSkeleton from "../components/ImageWithSkeleton";
 import handleWhatsApp from "../helper/handleWhatsApp";
 import { increaseUserInterest } from "../helper/userInterestHelper";
 
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import isEqual from "lodash.isequal";
 import { canon, ensureHttps } from "../common/urlUtils";
 import { trackBasic } from "../helper/trackBasic";
 
@@ -116,8 +117,106 @@ const ProductDetails = ({ route }) => {
     setShowImageViewer(true);
   };
 
+  // 1st render er somuy cache use kore
+  const getCachedProduct = async (productId) => {
+    try {
+      const raw = await AsyncStorage.getItem("productListCache");
+      if (raw) {
+        const list = JSON.parse(raw);
+        return list.find((p) => p._id === productId) || null;
+      }
+    } catch (err) {
+      // console.log("❌ Cache read error", err);
+    }
+    return null;
+  };
+
   useEffect(() => {
-    const fetchDetails = async () => {
+    let isMounted = true;
+
+    const hydrateUI = async (productData) => {
+      if (!isMounted) return;
+
+      setData(productData); // 🧠 show product
+
+      // 🔧 route থেকে আসা image (Home এ https) আর backend-এর image (http) – protocol agnostic করে মিলাও
+      const passedImage = route.params?.image || "";
+      const passedKey = canon(passedImage);
+      const variantIndexFromImage = productData.variants.findIndex((variant) =>
+        (variant.images || []).some((u) => canon(u) === passedKey)
+      );
+      const finalVariantIndex =
+        variantIndexFromImage !== -1 ? variantIndexFromImage : 0;
+
+      setSelectedVariantIndex(finalVariantIndex);
+      setSelectedSize(null);
+
+      // 🔁 Image map
+      const imageVariantMap = [];
+      const displayImages = [];
+      const keys = [];
+
+      productData.variants.forEach((variant, vIndex) => {
+        (variant.images || []).forEach((raw) => {
+          const show = ensureHttps(raw);
+          const key = canon(raw);
+          imageVariantMap.push({ key, variantIndex: vIndex });
+          displayImages.push(show);
+          keys.push(key);
+        });
+      });
+
+      setAllImages(displayImages);
+      setImageVariantMap(imageVariantMap);
+
+      // যদি passedImage থাকে → ওটাই নাও, না হলে fallback
+      const selectedKey =
+        passedImage ||
+        canon(productData.variants[finalVariantIndex]?.images?.[0]);
+
+      const scrollToIndex = keys.findIndex((k) => k === selectedKey);
+
+      if (scrollToIndex !== -1 && imageSliderRef.current) {
+        requestAnimationFrame(() => {
+          imageSliderRef.current.scrollTo({
+            x: screenWidth * scrollToIndex,
+            animated: false,
+          });
+        });
+      }
+
+      const initIdxFromPassed = passedImage
+        ? keys.findIndex((k) => k === passedImage)
+        : -1;
+      const initIndex = initIdxFromPassed >= 0 ? initIdxFromPassed : 0;
+
+      //const initialImg = passedImage || displayImages[initIndex] || null;
+      setSelectedImg(ensureHttps(passedImage));
+      setCurrentIndex(initIndex);
+
+      // recommendProduct
+      const raw = await AsyncStorage.getItem("productListCache");
+      if (raw) {
+        const list = JSON.parse(raw);
+        const reco =
+          list.filter((p) => p.category === productData.category) || null;
+        if (reco) {
+          setRecommendedProducts(reco);
+        }
+      }
+    };
+
+    const fetchData = async () => {
+      setLoading(true);
+
+      // 1️⃣ Cached
+      const cached = await getCachedProduct(id);
+      if (cached) {
+        hydrateUI(cached);
+        setLoading(false);
+      }
+
+      // 2️⃣ API
       try {
         const res = await axios({
           method: SummaryApi.product_details.method,
@@ -126,130 +225,40 @@ const ProductDetails = ({ route }) => {
           data: { productId: id },
         });
 
-    //     const res = await axios.get(
-    //   "https://api.egtake.com/api/product-details",
-    //   { params: { productId: id } }
-    // );
         if (res.data.success) {
-          const result = res.data.data;
-          setData(result);
-          setLoading(false); // ✅ done loading
-          console.log(" ✅ done details pgea",  result.subCategory );
-          
-          // tracking 
-          trackBasic('product_view', { subCategory: result.subCategory });
-          
+          const fresh = res.data.data;
 
-          // const variantIndexFromImage = result.variants.findIndex((variant) =>
-          //   (variant.images || []).includes(route.params?.image)
-          // ); replace with
-
-
-
-        // 🔧 route থেকে আসা image (Home এ https) আর backend-এর image (http) – protocol agnostic করে মিলাও
-         const passedImage = route.params?.image || "";
-         const passedKey = canon(passedImage);
-         const variantIndexFromImage = result.variants.findIndex((variant) => {
-          const imgs = (variant.images || []);
-          return imgs.some((u) => canon(u) === passedKey);
-        });
-
-
-
-
-          const finalVariantIndex =
-            variantIndexFromImage !== -1 ? variantIndexFromImage : 0;
-
-          setSelectedVariantIndex(finalVariantIndex);
-          setSelectedSize(null);
-
-          // const imageVariantMap = [];
-          // const allVariantImages = result.variants.flatMap((variant, vIndex) =>
-          //   (variant.images || []).map((img) => {
-          //     imageVariantMap.push({ image: img, variantIndex: vIndex });
-          //     return img;
-          //   })
-          // );
-
-
-
-          // 🔧 দুইটা parallel array: displayImages (https), keys (canonical) + দ্রুত lookup ম্যাপ
-         const imageVariantMap = [];
-         const displayImages = [];
-         const keys = [];
-        result.variants.forEach((variant, vIndex) => {
-           (variant.images || []).forEach((raw) => {
-             const show = ensureHttps(raw);
-             const key = canon(raw);
-             imageVariantMap.push({ key, variantIndex: vIndex });
-             displayImages.push(show);
-             keys.push(key);
-           });
-         });
-
-
-
-
-          // setAllImages(allVariantImages);replace with
-          setAllImages(displayImages); 
-
-
-          setImageVariantMap(imageVariantMap);
-
-          // const selectedImage = result.variants[finalVariantIndex]?.images?.[0];
-          // const scrollToIndex = allVariantImages.findIndex(
-          //   (img) => img === selectedImage
-          // );
-
-
-          const selectedImageRaw = result.variants[finalVariantIndex]?.images?.[0];
-         const selectedKey = canon(selectedImageRaw);
-         const scrollToIndex = keys.findIndex((k) => k === selectedKey);
-
-
-
-          if (scrollToIndex !== -1 && imageSliderRef.current) {
-            requestAnimationFrame(() => {
-              imageSliderRef.current.scrollTo({
-                x: screenWidth * scrollToIndex,
-                animated: false,
-              });
-            });
+          if (!isEqual(fresh, cached)) {
+            hydrateUI(fresh); // only if changed
           }
 
-          // setSelectedImg(selectedImage || allVariantImages[0] || null);
-          //setSelectedImg(passedImage || allImages[0]); //replace with
+          // 🔁 recommendations
+          // const reco = await axios({
+          //   method: SummaryApi.category_wish_product.method,
+          //   url: SummaryApi.category_wish_product.url,
+          //   headers: { "Content-Type": "application/json" },
+          //   data: { category: fresh.category },
+          // });
+          // if (reco.data.success) {
+          // console.log("🦌◆recoreco.data.data",reco.data.data);
+          // setRecommendedProducts(reco.data.data || []);
           // }
 
-          // Rcode
-          // ✅ initial main image নির্ধারণ: passed → list first
-         const initIdxFromPassed = passedKey ? keys.findIndex((k) => k === passedKey) : -1;
-         const initIndex = initIdxFromPassed >= 0 ? initIdxFromPassed : 0;
-         const initialImg = displayImages[initIndex] || null;
-         setSelectedImg(initialImg);
-         setCurrentIndex(initIndex);
-
-
-
-
-          // 🔁 Fetch recommendation based on category
-          const reco = await axios({
-            method: SummaryApi.category_wish_product.method,
-            url: SummaryApi.category_wish_product.url,
-            headers: { "Content-Type": "application/json" },
-            data: { category: result.category },
-          });
-          if (reco.data.success) {
-            setRecommendedProducts(reco.data.data || []);
-          }
+          // tracking
+          trackBasic("product_view", { subCategory: fresh.subCategory });
         }
-      } catch (error) {
-        setLoading(false); // ✅ done loading
-         console.log(" ✅ error details pgea", id, error.message);
-        // console.error("Product fetch error", error);
+      } catch (err) {
+        // console.log("❌ Product fetch error", err.message);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchDetails();
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -305,10 +314,10 @@ const ProductDetails = ({ route }) => {
   const selectedVariant = data.variants[selectedVariantIndex] || {};
   const variantSizes = selectedVariant.sizes || [];
   const isSizeAvailable = variantSizes.some((s) => s.size?.trim());
-  console.log(
-    "Filtered Valid Sizes 🧪",
-    variantSizes.filter((s) => s.size?.trim())
-  );
+  // console.log(
+  //   "Filtered Valid Sizes 🧪",
+  //   variantSizes.filter((s) => s.size?.trim())
+  // );
 
   const getStockBySize = (size) => {
     const sizeObjWithStk = variantSizes.find((s) => s.size === size);
@@ -320,12 +329,15 @@ const ProductDetails = ({ route }) => {
       ? Math.floor(((data.price - data.selling) / data.price) * 100)
       : 0;
 
+  const totalStock = variantSizes.reduce((sum, s) => sum + s.stock, 0);
   const isAddToCartDisabled = () => {
     if (isSizeAvailable) {
       // Size ase, kintu select hoy nai or stock 0
       const selectedSizeStock =
         variantSizes.find((s) => s.size === selectedSize)?.stock || 0;
       return !selectedSize || selectedSizeStock <= 0;
+    } else if (!totalStock) {
+      return totalStock <= 0;
     }
 
     // Size nai → always allow
@@ -334,39 +346,38 @@ const ProductDetails = ({ route }) => {
 
   // ✅ Only validate size if sizes are available
   const handleAddToCart = async () => {
-  // 🔒 যদি লগইন না থাকে → Login পেজে নিয়ে যাবে
-  if (!user?._id) {
-    navigation.navigate("Login");
-    return;
-  }
+    // 🔒 যদি লগইন না থাকে → Login পেজে নিয়ে যাবে
+    if (!user?._id) {
+      navigation.navigate("Login");
+      return;
+    }
 
-  if (isSizeAvailable && !selectedSize) {
-    Alert.alert("Please select a size.");
-    return;
-  } else if (data.variants.length < 1) {
-    Alert.alert("Please select a color.");
-    return;
-  }
+    if (isSizeAvailable && !selectedSize) {
+      Alert.alert("Please select a size.");
+      return;
+    } else if (data.variants.length < 1) {
+      Alert.alert("Please select a color.");
+      return;
+    }
 
-  await addToCart({
-    productId: data._id,
-    size: isSizeAvailable ? selectedSize : "",
-    color: isColorAvailable ? selectedVariant?.color : "",
-    image: selectedImg.replace("https://", "http://"), 
-    price: data.price,
-    selling: data.selling,
-  });
+    await addToCart({
+      productId: data._id,
+      size: isSizeAvailable ? selectedSize : "",
+      color: isColorAvailable ? selectedVariant?.color : "",
+      image: selectedImg.replace("https://", "http://"),
+      price: data.price,
+      selling: data.selling,
+    });
 
-  fetchUserAddToCart(true);
-trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
- 
-};
+    fetchUserAddToCart(true);
+    trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
+  };
 
   const openCommitmentModal = (title, detail) => {
     setSelectedCommitment({ title, detail });
     setModalVisible(true);
   };
-  console.log("🦌🦌🦌🦌SelectedSize", selectedSize);
+  // console.log("🦌🦌🦌🦌SelectedSize", selectedSize);
 
   // status stock check
   let stockMessage = "";
@@ -384,7 +395,6 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
     }
   } else {
     // Size not available: count total stock directly from sizes
-    const totalStock = variantSizes.reduce((sum, s) => sum + s.stock, 0);
     stockMessage = totalStock > 0 ? `Only ${totalStock} left` : "Sold out";
   }
 
@@ -420,10 +430,7 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
     if (data?._id) fetchReviews();
   }, [data?._id]);
 
-  // set Safe area
-  const insets = useSafeAreaInsets();
-  const bottomSafe = Math.max(insets.bottom, 12); // ✅ handles Android/iOS
-  const ACTION_BAR_HEIGHT = 64;
+  const ACTION_BAR_HEIGHT = 105;
 
   return (
     <View style={{ flex: 1 }}>
@@ -439,7 +446,7 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
         style={styles.container}
         ref={scrollRef}
         contentContainerStyle={{
-          paddingBottom: ACTION_BAR_HEIGHT + bottomSafe + 16,
+          paddingBottom: ACTION_BAR_HEIGHT,
         }}
       >
         <View>
@@ -463,14 +470,11 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
               //   (item) => item.image === currentImage
               // );
 
-
-
-                 // currentImage কে canonical key বানিয়ে map-এ খুঁজি
-   const currentKey = canon(currentImage);
-   const found = imageVariantMap.find((item) => item.key === currentKey);
-
-
-
+              // currentImage কে canonical key বানিয়ে map-এ খুঁজি
+              const currentKey = canon(currentImage);
+              const found = imageVariantMap.find(
+                (item) => item.key === currentKey
+              );
 
               if (found && found.variantIndex !== selectedVariantIndex) {
                 setSelectedVariantIndex(found.variantIndex);
@@ -502,8 +506,7 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
                   source={{
                     uri:
                       currentIndex === index
-                        ?ensureHttps(selectedImg) ||
-                         ensureHttps(img) 
+                        ? ensureHttps(selectedImg) || ensureHttps(img)
                         : ensureHttps(img),
                   }}
                   style={styles.sliderImage}
@@ -571,9 +574,9 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
                     setSelectedVariantIndex(idx);
                     setSelectedSize(null);
                     const newImg = variant.images?.[0];
-                    setSelectedImg(ensureHttps(newImg));//setSelectedImg(newImg);
+                    setSelectedImg(ensureHttps(newImg)); //setSelectedImg(newImg);
                     const imgIndex = allImages.findIndex(
-                      (img) => canon(img) === canon(newImg)//(img) => img === newImg
+                      (img) => canon(img) === canon(newImg) //(img) => img === newImg
                     );
                     if (imgIndex !== -1 && imageSliderRef.current) {
                       imageSliderRef.current.scrollTo({
@@ -672,21 +675,24 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
               style={styles.policyItem}
               onPress={() =>
                 openCommitmentModal(
-                  "Free Shipping",
-                  "Free delivery in Narayanganj"
+                  "Free Delivery",
+                  `✓নারায়ণগঞ্জে ৪৯৯ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  \n✓Narayanganj Express delivery within 3 hours`
                 )
               }
             >
               <View>
                 <View style={styles.policyRowJustify}>
                   <Text style={styles.policyTitle}>
-                    🚚 Free Delivery over ৳1,500
+                    🚚 Free delivery 
                   </Text>
                   <Text style={styles.arrow}>›</Text>
                 </View>
-                <Text style={styles.policySubText}>
-                  Delivery by{" within 6 hours "}
-                </Text>
+                {/* <Text style={[styles.policySubText, {paddingLeft:20}]}>
+                </Text> */}
+                <Text style={styles.policyCheck}>
+                    <Text style={{ color: "green" }}>✓</Text> when eligible—tap here for details.
+                  </Text>
               </View>
             </TouchableOpacity>
 
@@ -936,25 +942,7 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
         </View>
       </ScrollView>
 
-      {/* ✅ Fixed Add to Cart Button */}
-      {/* <View style={styles.fixedAddToCartWrapper}>
-        <Button
-          title={
-            isSizeAvailable
-              ? !selectedSize
-                ? "Select Size ?"
-                : variantSizes.find((s) => s.size === selectedSize)?.stock > 0
-                ? "Add to Cart"
-                : "Out of Stock !"
-              : "Add to Cart"
-          }
-          onPress={handleAddToCart}
-          color="white"
-          disabled={isAddToCartDisabled()}
-        />
-      </View> */}
-
-      <View style={[styles.fixedActionRow, { paddingBottom: bottomSafe }]}>
+      <View style={[styles.fixedActionRow, { paddingBottom: 8 }]}>
         {/* cart icone btn */}
         <TouchableOpacity
           onPress={() => navigation.navigate("CartPage")}
@@ -984,7 +972,9 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
           onPress={handleAddToCart}
         >
           <Text style={styles.cartRowText}>
-            {isSizeAvailable
+            {(totalStock ?? 0) <= 0
+              ? "Out of Stock"
+              : isSizeAvailable
               ? !selectedSize
                 ? "Select Size"
                 : variantSizes.find((s) => s.size === selectedSize)?.stock > 0
@@ -999,7 +989,7 @@ trackBasic('add_to_cart', { subCategory: data?.subCategory, count: 1 });
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: "#fff", marginBottom: 45 }, //marginBottom: 75
+  container: { padding: 6, backgroundColor: "#fff", marginBottom: 25 }, //marginBottom: 75
   backButton: {
     position: "absolute",
     top: 45,
@@ -1214,7 +1204,7 @@ const styles = StyleSheet.create({
 
   fixedActionRow: {
     position: "absolute",
-    bottom: 4, // ✅ was 20
+    bottom: 1, // ✅ was 20
     left: 0, // ✅ keep space for mini cart footer
     right: 0,
     flexDirection: "row",
@@ -1292,7 +1282,7 @@ const styles = StyleSheet.create({
   avgChip: {
     marginTop: 6,
     alignSelf: "flex-start",
-    paddingVertical: 6,
+    paddingVertical: 1,
     paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: "#f4f4f4",

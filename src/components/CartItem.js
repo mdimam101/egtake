@@ -1,20 +1,17 @@
-import React, { useContext, useRef } from 'react';
+import { useContext, useRef } from 'react';
 import {
-  View,
-  Text,
+  Alert,
   Image,
   StyleSheet,
+  Text,
   TouchableOpacity,
-  Alert,
-  Dimensions,
+  View,
 } from 'react-native';
-import Context from '../context';
-import increaseQuantity from '../helper/increaseQuantity';
-import decreaseQuantity from '../helper/decreaseQuantity';
-import removeFromCart from '../helper/removeFromCart';
 import Toast from 'react-native-toast-message';
-
-const screenWidth = Dimensions.get("window").width;
+import Context from '../context';
+import decreaseQuantity from '../helper/decreaseQuantity';
+import increaseQuantity from '../helper/increaseQuantity';
+import removeFromCart from '../helper/removeFromCart';
 
 const CartItem = ({
   product,
@@ -65,11 +62,6 @@ const CartItem = ({
         refreshCart();
       }
     } catch (err) {
-      // console.warn("Increase quantity error:", err?.response?.data?.message || err.message);
-      // Toast.show({
-      //   type: "error",
-      //   text1: err?.response?.data?.message || "Could not increase quantity",
-      // });
     } finally {
       lockRef.current = false;
     }

@@ -1,78 +1,74 @@
-import React, { useContext } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useNavigation, useNavigationState } from "@react-navigation/native";
+import { useContext } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Context from "../context";
 
 const FooterNavBar = () => {
   const navigation = useNavigation();
   const user = useSelector((state) => state?.userState?.user);
   const { cartCountProduct } = useContext(Context);
-  const insets = useSafeAreaInsets();
 
   const currentRouteName = useNavigationState((state) => {
     if (!state || !state.routes || state.index == null) return "Home";
     return state.routes[state.index]?.name || "Home";
   });
 
-  // const hideFooterOnRoutes = ["CheckoutPage"];
+  // ❗️এখানে ProductDetails ইতিমধ্যে hide করা, তাই নিচের “Only cart icon…” ব্লকটা কখনো চলবে না।
   const hideFooterOnRoutes = ["CheckoutPage", "ProductDetails"];
   if (hideFooterOnRoutes.includes(currentRouteName)) return null;
 
-  // Only cart icon on ProductDetails screen
-  if (["ProductDetails"].includes(currentRouteName))
-    return (
-      <View style={[styles.footerForDetails, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-        <TouchableOpacity onPress={() => navigation.navigate("CartPage")} style={styles.cartWrapper}>
-          <View style={{ alignItems: "center" }}>
-            <Ionicons name="cart-outline" size={26} color={currentRouteName === "CartPage" ? "#FF466B" : "#333"} />
-          </View>
-          {cartCountProduct > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{cartCountProduct}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-
   const redirectURL = user?._id ? "Profile" : "Login";
 
+  // helper: কোন বাটন active
+  const isActive = (name) => currentRouteName === name;
+
   return (
-    <View
-      pointerEvents="box-none"
-      style={[
-        styles.footer,
-        {
-          // bottom safe padding
-          paddingBottom: Math.max(insets.bottom, 10),
-        },
-      ]}
-    >
-      <TouchableOpacity onPress={() => navigation.navigate("Home")}>
+    <View pointerEvents="box-none" style={styles.footer}>
+      {/* Home */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Home")}
+        disabled={isActive("Home")}                       // ← এখনকার রুট হলে disabled
+      >
         <View style={{ alignItems: "center" }}>
-          <FontAwesome name="home" size={26} color={currentRouteName === "Home" ? "#FF466B" : "#333"} />
-          <Text style={{ color: currentRouteName === "Home" ? "#FF466B" : "#333"}}>Home</Text>
+          <FontAwesome
+            name="home"
+            size={26}
+            color={isActive("Home") ? "#FF466B" : "#333"}  // রঙ আগের মতই
+          />
+          <Text style={{ color: isActive("Home") ? "#FF466B" : "#333" }}>Home</Text>
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Category")}>
+      {/* Category */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Category")}
+        disabled={isActive("Category")}
+      >
         <View style={{ alignItems: "center" }}>
           <MaterialCommunityIcons
             name="shape-outline"
             size={26}
-            color={currentRouteName === "Category" ? "#FF466B" : "#333"}
+            color={isActive("Category") ? "#FF466B" : "#333"}
           />
-          <Text style={{ color: currentRouteName === "Category" ? "#FF466B" : "#333" }}>Category</Text>
+          <Text style={{ color: isActive("Category") ? "#FF466B" : "#333" }}>Category</Text>
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("CartPage")} style={styles.cartWrapper}>
+      {/* Cart */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate("CartPage")}
+        style={styles.cartWrapper}
+        disabled={isActive("CartPage")}
+      >
         <View style={{ alignItems: "center" }}>
-          <Ionicons name="cart-outline" size={26} color={currentRouteName === "CartPage" ? "#FF466B" : "#333"} />
-          <Text style={{ color: currentRouteName === "CartPage" ? "#FF466B" : "#333" }}>Cart</Text>
+          <Ionicons
+            name="cart-outline"
+            size={26}
+            color={isActive("CartPage") ? "#FF466B" : "#333"}
+          />
+          <Text style={{ color: isActive("CartPage") ? "#FF466B" : "#333" }}>Cart</Text>
         </View>
         {cartCountProduct > 0 && (
           <View style={styles.badge}>
@@ -81,14 +77,18 @@ const FooterNavBar = () => {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate(redirectURL)}>
+      {/* Account (Profile/Login) */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate(redirectURL)}
+        disabled={isActive(redirectURL)}
+      >
         <View style={{ alignItems: "center" }}>
           <Ionicons
             name="person-circle-outline"
             size={26}
-            color={currentRouteName === redirectURL ? "#FF466B" : "#333"}
+            color={isActive(redirectURL) ? "#FF466B" : "#333"}
           />
-          <Text style={{ color: currentRouteName === redirectURL ? "#FF466B" : "#333" }}>Account</Text>
+          <Text style={{ color: isActive(redirectURL) ? "#FF466B" : "#333" }}>Account</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 75,
+    height: 55,
     position: "absolute",
     bottom: 0,
     left: 20,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 80+10,
+    height: 55,
     backgroundColor: "#fff",
     borderTopColor: "#ccc",
     borderTopWidth: 1,

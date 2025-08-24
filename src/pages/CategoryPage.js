@@ -29,7 +29,7 @@ const CategoryPage = () => {
 
   const categoryList = useSelector((state) => state.categoryState.categoryList);
 
-  console.log("categoryList_____>", categoryList);
+  // console.log("categoryList_____>", categoryList);
 
   useEffect(() => {
     setAllProducts(getProductFromStore);
@@ -58,10 +58,10 @@ const CategoryPage = () => {
       allProducts.find((p) => p.subCategory === subCat)
     );
   }
-  console.log(
-    "🦌filteredCategories🦌",
-    filteredCategories[0]?.img.replace("http://", "https://")
-  );
+  // console.log(
+  //   "🦌filteredCategories🦌",
+  //   filteredCategories[0]?.img.replace("http://", "https://")
+  // );
 
  // inside component
 const handleSubCategory = (subcatName) => {

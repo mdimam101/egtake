@@ -1,20 +1,20 @@
 
 
-import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
-import SummaryApi from '../common/SummaryApi';
 import Toast from 'react-native-toast-message';
+import SummaryApi from '../common/SummaryApi';
 
 const SignupPage = () => {
   const navigation = useNavigation();
@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderColor: '#ddd',
     borderWidth: 1,
+    color: "#111", // ✅ force visible text (fixes white-on-white in Dark Mode)
   },
   inputError: {
     borderColor: '#e53935',

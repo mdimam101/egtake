@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import {
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
   View,
 } from "react-native";
-import axios from "axios";
-import SummaryApi from "../common/SummaryApi";
 import { useDispatch, useSelector } from "react-redux";
+import SummaryApi from "../common/SummaryApi";
 import { setCategoryList } from "../store/categorySlice";
 import SkeletonCategoryBar from "./SkeletonCategoryBar";
 
-const CategoryListBar = ({ onSelectCategory, /*subCategory = "ALL"}*/}) => {
-  const subCategory = "ALL" // next i will solve it now just for test
+const CategoryListBar = ({ onSelectCategory /*subCategory = "ALL"}*/ }) => {
+  const subCategory = "ALL"; // next i will solve it now just for test
   const [categories, setCategories] = useState([]);
-  const getcategoryListFromStore = useSelector((state) => state.categoryState.categoryList);
+  const getcategoryListFromStore = useSelector(
+    (state) => state.categoryState.categoryList
+  );
   const dispatch = useDispatch();
   const [selected, setSelected] = useState(subCategory);
   const [loading, setLoading] = useState(true);
@@ -53,34 +55,35 @@ const CategoryListBar = ({ onSelectCategory, /*subCategory = "ALL"}*/}) => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       >
-        {categories.map((cat, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.categoryItem,
-              selected === cat.category && styles.categoryItemSelected,
-            ]}
-            onPress={() => {
-              const selectedCat = cat.category;
-              setSelected(selectedCat);
-              selectedCat === subCategory
-                ? onSelectCategory(null)
-                : onSelectCategory(selectedCat);
-            }}
-          >
-            <Text
+        {categories.map((cat, index) => {
+          const isSelected = selected === cat.category; // ✅ add
+          return (
+            <TouchableOpacity
+              key={index}
               style={[
-                styles.text,
-                selected === cat.category && {
-                  color: "#fff",
-                  fontWeight: "600",
-                },
+                styles.categoryItem,
+                isSelected && styles.categoryItemSelected,
               ]}
+              onPress={() => {
+                const selectedCat = cat.category;
+                setSelected(selectedCat);
+                selectedCat === subCategory
+                  ? onSelectCategory(null)
+                  : onSelectCategory(selectedCat);
+              }}
+              disabled={isSelected}
             >
-              {cat.category}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.text,
+                  isSelected && { color: "#fff", fontWeight: "600" },
+                ]}
+              >
+                {cat.category}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -89,7 +92,7 @@ const CategoryListBar = ({ onSelectCategory, /*subCategory = "ALL"}*/}) => {
 const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
-    top: 95-15,
+    top: 95 - 14,
     left: 0,
     right: 0,
     zIndex: 10,

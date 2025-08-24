@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { useContext, useState } from "react";
 import {
-  ActivityIndicator, // 👈 add
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,41 +21,29 @@ const LoginPage = () => {
   const navigation = useNavigation();
   const { fetchUserDetails } = useContext(Context);
 
-  const [data, setData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [data, setData] = useState({ email: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false); // 🔒 prevent double press
 
   const handleOnChange = (key, value) => {
-    setData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setData((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return; // 🔒 guard against double tap
+    if (isSubmitting) return;
     setIsSubmitting(true);
-
     try {
       const response = await axios({
         method: SummaryApi.signIn.method,
         url: SummaryApi.signIn.url,
         headers: { "Content-Type": "application/json" },
         withCredentials: true, // ✅ MUST for cookie auth
-        data: data,
+        data,
       });
 
       if (response.data.success) {
-        Toast.show({
-          type: "success",
-          text1: "Login successful",
-        });
-
-        fetchUserDetails(); // ✅ get user info
-        navigation.navigate("Home"); // ✅ redirect to Home
+        Toast.show({ type: "success", text1: "Login successful" });
+        fetchUserDetails();
+        navigation.navigate("Home");
       } else {
         Toast.show({
           type: "error",
@@ -63,13 +51,9 @@ const LoginPage = () => {
         });
       }
     } catch (error) {
-      // console.log("Login Error:", error?.response?.data || error.message);
-      // Toast.show({
-      //   type: "error",
-      //   text1: error?.response?.data?.message || "Something went wrong",
-      // });
+      Toast.show({ type: "error", text1: "Something went wrong" });
     } finally {
-      setIsSubmitting(false); // ✅ re-enable button
+      setIsSubmitting(false);
     }
   };
 
@@ -88,9 +72,12 @@ const LoginPage = () => {
             placeholderTextColor="#888"
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
             value={data.email}
             onChangeText={(text) => handleOnChange("email", text)}
-            editable={!isSubmitting} // 📴 optional: lock while submitting
+            editable={!isSubmitting}
+            selectionColor="#1e90ff"
+            returnKeyType="next"
           />
 
           <TextInput
@@ -98,9 +85,16 @@ const LoginPage = () => {
             placeholder="Enter password"
             placeholderTextColor="#888"
             secureTextEntry
+            autoCapitalize="none"
+            autoComplete="password"
+            textContentType="password"
+            autoCorrect={false}
             value={data.password}
             onChangeText={(text) => handleOnChange("password", text)}
             editable={!isSubmitting}
+            selectionColor="#1e90ff"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
           />
 
           <TouchableOpacity
@@ -120,7 +114,11 @@ const LoginPage = () => {
                 {isSubmitting ? "Logging in..." : "Login"}
               </Text>
               {isSubmitting && (
-                <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 8 }} />
+                <ActivityIndicator
+                  size="small"
+                  color="#fff"
+                  style={{ marginLeft: 8 }}
+                />
               )}
             </View>
           </TouchableOpacity>
@@ -181,6 +179,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderColor: "#ddd",
     borderWidth: 1,
+    color: "#111", // ✅ force visible text (fixes white-on-white in Dark Mode)
   },
   button: {
     backgroundColor: "#1e90ff",
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonDisabled: {
-    opacity: 0.6, // 👁️ visual feedback
+    opacity: 0.6,
   },
   buttonInner: {
     flexDirection: "row",

@@ -26,6 +26,7 @@ import {
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SummaryApi from "../common/SummaryApi";
 import ReviewModal from "../components/ReviewModal";
 import Context from "../context";
@@ -289,7 +290,7 @@ const SupportSheet = ({ visible, onClose }) => (
 );
 
 // 🔧 SettingsSheet gets onOpenSupport to open SupportSheet
-const SettingsSheet = ({ visible, onClose, onLogout, navigateTo, onOpenSupport }) => (
+const SettingsSheet = ({ visible, onClose, onLogout, onDelete, navigateTo, onOpenSupport }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <View style={styles.sheetOverlay}>
       <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
@@ -319,6 +320,15 @@ const SettingsSheet = ({ visible, onClose, onLogout, navigateTo, onOpenSupport }
             onPress={() => { onClose(); onLogout(); }}
             right={<Ionicons name="log-out-outline" size={18} color="#d32f2f" />}
           />
+
+          <SettingsRow
+  icon="trash-outline"
+  label="Delete Account"
+  danger
+  onPress={() => { onClose(); onDelete?.(); }}
+  right={<Ionicons name="trash-outline" size={18} color="#d32f2f" />}
+/>
+
         </View>
       </View>
     </View>
@@ -411,6 +421,8 @@ const ProfilePage = () => {
 
   const [settingsOpen, setSettingsOpen] = useState(false); // NEW: settings sheet state
   const [supportOpen, setSupportOpen] = useState(false);   // 🆕 support sheet state
+
+  const [deleteAsk, setDeleteAsk] = useState(false);
 
   // Fetch Orders
   const fetchUserOrders = useCallback(async () => {
@@ -515,6 +527,33 @@ const ProfilePage = () => {
       setLogoutAsk(false);
     }
   };
+
+  
+    //handle delete Account
+    const handleDeleteAccount = async () => {
+  try {
+    // ডাবল ট্যাপ ঠেকাতে চাইলে আলাদা deleting state নিতে পারো
+    const res = await axios.delete(SummaryApi.delete_account.url, { withCredentials: true });
+
+    if (res.data?.success) {
+      // লোকাল স্টেট/স্টোর ক্লিয়ার
+      dispatch(setUserDetails(null));
+      setCartCountProduct?.(0);
+      try { await AsyncStorage.clear(); } catch {}
+
+      Toast.show({ type: "success", text1: "Account deleted" });
+
+      // হোমে নিয়ে যাও (history reset)
+      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+    } else {
+      Toast.show({ type: "error", text1: res.data?.message || "Delete failed" });
+    }
+  } catch (e) {
+  } finally {
+    setDeleteAsk(false);
+  }
+};
+
 
   const handleCancelOrder = async (orderId) => {
     try {
@@ -851,7 +890,9 @@ const ProfilePage = () => {
         onClose={() => setSettingsOpen(false)}
         onLogout={() => setLogoutAsk(true)}
         navigateTo={(route) => navigation.navigate(route)}
-        onOpenSupport={() => setSupportOpen(true)} // 🆕
+        onOpenSupport={() => setSupportOpen(true)} 
+        onDelete={() => setDeleteAsk(true)}
+
       />
 
       {/* 🆕 Support Sheet */}
@@ -867,6 +908,16 @@ const ProfilePage = () => {
         onCancel={() => setLogoutAsk(false)}
         onOk={handleLogout}
       />
+
+      <ConfirmModal
+  visible={deleteAsk}
+  title={"Are you sure delete your accoutn?"}
+  cancelText="No"
+  okText="Yes, delete"
+  onCancel={() => setDeleteAsk(false)}
+  onOk={handleDeleteAccount}
+/>
+
 
       {/* Track Modal */}
       <TrackOrderModal

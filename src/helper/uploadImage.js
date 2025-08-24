@@ -49,7 +49,7 @@ const uploadImage = async (imageFile) => {
     }
     return { error: true, message: "Upload failed", raw: data };
   } catch (err) {
-    console.log("uploadImage-error(FileSystem):", err);
+    // console.log("uploadImage-error(FileSystem):", err);
     return { error: true, message: "Upload failed (Android FS)" };
   }
 };

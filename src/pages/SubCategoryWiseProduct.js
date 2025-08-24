@@ -19,7 +19,7 @@ const SubCategoryWiseProduct = ({ route }) => {
   const getAllProductFromStore = useSelector(
     (state) => state.productState.productList
   );
-console.log("🦌subCategory", subCategory);
+// console.log("🦌subCategory", subCategory);
 
   const fetchWishCategoryProduct = async () => {
     try {
@@ -49,7 +49,7 @@ console.log("🦌subCategory", subCategory);
         (item) =>
           item.category?.toLowerCase() === selectedCategory.toLowerCase()
       );
-      console.log("filtered:", selectedCategory, categoryWise);
+      // console.log("filtered:", selectedCategory, categoryWise);
       const prioritizeProducts = async () => {
         setSortedProducts(categoryWise);
 

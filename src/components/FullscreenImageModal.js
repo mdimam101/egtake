@@ -23,7 +23,6 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // ✅ safe area
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const normalizeUri = (u = "") =>
@@ -114,7 +113,7 @@ const FullscreenImageModal = ({ visible, onClose, images = [], initialIndex = 0 
   const [index, setIndex] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
   const [resetToken, setResetToken] = useState(0);
-  const insets = useSafeAreaInsets();                         // ✅
+  // const insets = useSafeAreaInsets();                         // ✅
 
   useEffect(() => {
     if (visible && listRef.current) {
@@ -162,9 +161,10 @@ const renderItem = ({ item }) => (
       <StatusBar style="light" backgroundColor="rgba(0,0,0,0.001)" translucent />
 
       <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* <View style={{height:40, backfaceVisibility:"#000"}}></View> */}
         <View style={styles.overlay}>
           {/* top bar */}
-          <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+          <View style={styles.topBar}>
             <View style={{ flex: 1 }} />
             <Text style={styles.counter}>{index + 1} / {images.length}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -195,9 +195,10 @@ const renderItem = ({ item }) => (
 export default FullscreenImageModal;
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "#000" },
+  overlay: {flex: 1, backgroundColor: "#000" },
   topBar: {
     paddingBottom: 10,
+    paddingTop:50,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",

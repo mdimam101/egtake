@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 import SummaryApi from "../common/SummaryApi";
@@ -313,8 +312,6 @@ const CheckoutPage = () => {
       fetchUserAddToCart(true);
     }
   };
-
-  const insets = useSafeAreaInsets();
   const BUTTON_H = 56;
 
   const deliveryLabelValue =
@@ -326,7 +323,7 @@ const CheckoutPage = () => {
       <View style={styles.headerTitle}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={[styles.backIcon, { top: insets.top + 8 }]}
+          style={styles.backIcon}
           disabled={isSubmitting}
         >
           <Ionicons name="chevron-back" size={25} color="#000" />
@@ -338,7 +335,7 @@ const CheckoutPage = () => {
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: BUTTON_H + insets.bottom + 16 }}
+        contentContainerStyle={{ paddingBottom: BUTTON_H }}
         scrollEnabled={!isSubmitting}
       >
         <Text style={{ paddingTop: 10, fontWeight: "bold" }}>
@@ -675,7 +672,7 @@ const CheckoutPage = () => {
           position: "absolute",
           left: 14,
           right: 14,
-          bottom: insets.bottom + 8,
+          bottom:  8,
         }}
       >
         <TouchableOpacity

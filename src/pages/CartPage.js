@@ -153,13 +153,13 @@ const CartPage = () => {
     }, 0);
 
   const handleCheckout = () => {
-    console.log("◆◆handleCheckout◆_______：");
+    // console.log("◆◆handleCheckout◆_______：");
 
     const selectedItemsDetails = cartItems.filter((item) => {
       const result = findStockFromLatest(item, latestProducts);
       return result.inStock && selectedItems.includes(item._id);
     });
-    console.log("🦌🦌selectedItemsDetails🦌🦌", selectedItemsDetails);
+    // console.log("🦌🦌selectedItemsDetails🦌🦌", selectedItemsDetails);
 
     navigation.navigate("CheckoutPage", { selectedItemsDetails });
   };
@@ -270,17 +270,6 @@ const CartPage = () => {
             onPress={toggleSelectAll}
             style={styles.selectAllRow}
           >
-            {/* <View
-              style={[
-                styles.checkbox,
-                selectedItems.length !== 0 ? styles.checked : null,
-              ]}
-            >
-              {selectedItems.length !== 0 && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View> */}
-
             <View
               style={[styles.checkbox, allSelected ? styles.checked : null]}
             >
@@ -316,12 +305,13 @@ export default CartPage;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 14,
+    padding: 5,
+    paddingBottom:30,
     backgroundColor: "#F2F2F2",
-    marginBottom: 60,
+    marginBottom: 30,
   },
   header: {
-    height: 70,
+    height: 80,
     justifyContent: "center",
     alignItems: "center",
     borderBottomWidth: 1,

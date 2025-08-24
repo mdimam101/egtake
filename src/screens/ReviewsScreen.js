@@ -1,18 +1,17 @@
 // ✅ ReviewsScreen.jsx
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  ActivityIndicator,
   FlatList,
   Image,
   ScrollView,
-  ActivityIndicator,
-  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import SummaryApi from "../common/SummaryApi";
 import FullscreenImageModal from "../components/FullscreenImageModal";
 
@@ -158,9 +157,7 @@ export default function ReviewsScreen({ route, navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      <StatusBar barStyle="dark-content" />
-      {/* Top bar with back */}
+    <View style={{  backgroundColor: "#fff" }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color="#111" />

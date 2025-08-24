@@ -14,9 +14,9 @@ const increaseQuantity = async (cartItemId) => {
     const result = response.data;
 
     if (result.success) {
-      ToastAndroid.show(result.message || "Quantity increased", ToastAndroid.SHORT);
+      // ToastAndroid.show(result.message || "Quantity increased", ToastAndroid.SHORT);
     } else {
-      ToastAndroid.show(result.message || "Failed to increase quantity", ToastAndroid.SHORT);
+      // ToastAndroid.show(result.message || "Failed to increase quantity", ToastAndroid.SHORT);
     }
 
     return result;

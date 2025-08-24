@@ -1,4 +1,4 @@
-const BASE_URL ="https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com"//"https://api.egtake.com" // 'https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com' //"https://ecommerce-project-swart-five.vercel.app" //"http://192.168.3.4:8080"// "http://192.168.3.4:8080"// "https://ecommerce-project-mbcd.vercel.app"//
+const BASE_URL ="https://api.egtake.com" // "https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com"//"https://api.egtake.com" // 'https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com' //"https://ecommerce-project-swart-five.vercel.app" //"http://192.168.3.4:8080"// "http://192.168.3.4:8080"// "https://ecommerce-project-mbcd.vercel.app"//
 ;
 
 const SummaryApi = {
@@ -171,6 +171,10 @@ create_review: {
     url: `${BASE_URL}/api/analytics-basic/timeseries`,
     method: "get",
   },
+  delete_account: {
+  url: `${BASE_URL}/api/account`,
+  method: "delete",
+},
 };
 
 export default SummaryApi;

@@ -1,12 +1,15 @@
 import { useNavigation } from "@react-navigation/native";
+import { Image as ExpoImage } from "expo-image";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ensureHttps from "../common/ensureHttps";
 
 const UserSlideProductCard = ({
   productData,
   isLast = false,
   onViewMorePress,
+  disabled = false,
+  pressGuard,
 }) => {
   const navigation = useNavigation();
 
@@ -20,25 +23,32 @@ const UserSlideProductCard = ({
       </TouchableOpacity>
     );
   }
+
+  const imgUri = ensureHttps(productData?.img);
+
   return (
     <TouchableOpacity
+      disabled={disabled}
       onPress={() =>
+        !disabled &&
+        (!pressGuard || pressGuard(productData?._id)) &&
         navigation.navigate("ProductDetails", {
           id: productData._id,
           variantColor: productData.variantColor || null,
           variantSize: productData.variantSize || null,
-          // image: productData?.img,
-           image: ensureHttps(productData?.img),
+          image: imgUri,
         })
       }
-      style={styles.card}
+      style={[styles.card, disabled && { opacity: 0.6 }]}
     >
-      <Image
-        //source={{ uri: productData?.img.replace("http://", "https://") }}
-        source={
-          productData?.img ? { uri: ensureHttps(productData?.img) } : undefined
-        }
+      <ExpoImage
+        source={imgUri ? { uri: imgUri } : null}
         style={styles.image}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        priority="high"
+        transition={0}
+        recyclingKey={productData?.cardKey || productData?._id}
       />
       <Text style={styles.price}>৳{productData?.selling}</Text>
     </TouchableOpacity>
@@ -53,8 +63,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
     borderRadius: 6,
-    overflow: "hidden", // 👈 ensures image doesn't overflow
-    // marginLeft:0
+    overflow: "hidden",
   },
   image: {
     width: "100%",
@@ -64,7 +73,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 16,
-    color: "#ff5722", // orange/red
+    color: "#ff5722",
     fontWeight: "bold",
     marginTop: 5,
     textAlign: "center",

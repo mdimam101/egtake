@@ -9,10 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { NewsTickerContext } from "../context/NewsTickerContext"; // ✅ import context
 import ensureHttps from "../common/ensureHttps";
+import { NewsTickerContext } from "../context/NewsTickerContext"; // ✅ import context
+import * as ImageSizeCache from "../utils/imageSizeCache";
 
-const UserProductCart = ({ productData, fromDetails = false }) => {
+const UserProductCart = ({ productData, fromDetails = false, disabled = false, pressGuard  }) => {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get("window").width;
   const cardWidth = screenWidth * 0.49;
@@ -34,19 +35,37 @@ const UserProductCart = ({ productData, fromDetails = false }) => {
 
   useEffect(() => {
   let mounted = true;
-  if (imageUrl) {
-    Image.getSize(
-      imageUrl,
-      //imageUrl.replace("http://", "https://"),
-      (width, height) => {
-        if (mounted) {
-          const ratio = height / width;
-          setImageHeight(cardWidth * ratio);
-        }
-      },
-      () => { setImageHeight(cardWidth * 1.2); } // ✅ graceful fallback
-    );
-  }
+  // if (imageUrl) {
+  //   Image.getSize(
+  //     imageUrl,
+  //     //imageUrl.replace("http://", "https://"),
+  //     (width, height) => {
+  //       if (mounted) {
+  //         const ratio = height / width;
+  //         setImageHeight(cardWidth * ratio);
+  //       }
+  //     },
+  //     () => { setImageHeight(cardWidth * 1.2); } // ✅ graceful fallback
+  //   );
+  // }
+
+   (async () => {
+   if (!imageUrl) return;
+   // 1) Try cached ratio (instant)
+   const cached = await ImageSizeCache.getCachedRatio(imageUrl);
+   if (mounted && typeof cached === "number") {
+     setImageHeight(cardWidth * cached);
+   }
+   // 2) Ensure fresh (fetch if missing/expired)
+   const fresh = await ImageSizeCache.getOrFetchRatio(imageUrl);
+   if (mounted && typeof fresh === "number" && fresh !== cached) {
+     setImageHeight(cardWidth * fresh);
+   }
+   // 3) Final fallback if everything failed
+   if (mounted && !cached && !fresh) {
+     setImageHeight(cardWidth * 1.2);
+   }
+ })();
   return () => {
     mounted = false; // ⛔ prevent memory warning
   };
@@ -62,7 +81,9 @@ const UserProductCart = ({ productData, fromDetails = false }) => {
   }, [visibleIndex]);
 
   const handlePress = () => {
-        console.log("🦌productData>>>>>", productData);
+     if (disabled) return;                        // locked
+    if (pressGuard && !pressGuard(productData?._id)) return; // set lock
+        // console.log("🦌productData>>>>>", productData);
     const navigateMethod = fromDetails ? navigation.push : navigation.navigate;
     navigateMethod("ProductDetails", {
       id: productData._id,
@@ -73,7 +94,10 @@ const UserProductCart = ({ productData, fromDetails = false }) => {
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress}>
+     <TouchableOpacity
+      style={[styles.card, disabled && { opacity: 0.6 }]}
+      onPress={handlePress}
+      disabled={disabled}>
       <Image
         //source={{ uri: imageUrl.replace("http://", "https://") }}
         source={imageUrl ? { uri: imageUrl } : undefined}
