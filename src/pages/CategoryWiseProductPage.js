@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
+  Dimensions,
   ScrollView,
   StyleSheet,
-  Dimensions,
+  Text,
+  View,
 } from "react-native";
-import axios from "axios";
 import SummaryApi from "../common/SummaryApi";
 import UserProductCart from "../components/UserProductCart";
 import { sortProductsByUserInterest } from "../helper/sortByUserInterest";
+import { generateOptimizedVariants } from "../helper/variantUtils";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -39,51 +40,24 @@ const CategoryWiseProductPage = ({ route }) => {
     fetchWishCategoryProduct();
   }, [categoryName]);
 
-    
+  // ✅ HOME-STYLE: সব variants interleave + no-variant fallback
   const optimizedProducts = useMemo(() => {
-    const result = [];
-    const variantGroups = [];
-  
-    wishProductList.forEach((item) => {
-        const variants = item.variants || [];
-        let maxShow = 1;
-        if (variants.length >= 7) maxShow = 4;
-        else if (variants.length >= 5) maxShow = 3;
-        else if (variants.length >= 3) maxShow = 2;
-  
-        for (let i = 0; i < Math.min(maxShow, variants.length); i++) {
-          if (!variantGroups[i]) variantGroups[i] = [];
-          variantGroups[i].push({
-            _id: item._id,
-            productName: item.productName,
-            selling: item.selling,
-            category: item.category,
-            subCategory: item.subCategory,
-            img: variants[i]?.images?.[0],
-            variantColor: variants[i]?.color || null,
-            trandingProduct: item.trandingProduct,
-          });
-        }
-    });
-  
-    variantGroups.forEach((group) => {
-      result.push(...group);
-    });
-  
-    return result;
-  }, [wishProductList]); // ✅ Dependency
-  
+   const optimizedProductsResult = generateOptimizedVariants(wishProductList);
+    return optimizedProductsResult;
+  }, [wishProductList]); // ✅ Dependency ঠিক আছে 
+
   useEffect(() => {
     const prioritizeProducts = async () => {
       const sorted = await sortProductsByUserInterest(optimizedProducts);
       setSortedProducts(sorted);
     };
-  
+
     if (optimizedProducts.length > 0) {
       prioritizeProducts();
+    } else {
+      setSortedProducts([]); // clear when empty
     }
   }, [optimizedProducts]);
-  
 
   return (
     <ScrollView style={styles.container}>
@@ -106,8 +80,8 @@ const CategoryWiseProductPage = ({ route }) => {
 
 const styles = StyleSheet.create({
   container: {
-    // backgroundColor: "#fff",
-    backfaceVisibility:"#fff",
+    backgroundColor: "#fff",
+    // backfaceVisibility: "#fff",
     padding: 10,
   },
   heading: {

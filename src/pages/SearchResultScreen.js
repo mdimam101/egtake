@@ -1,26 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useRoute } from "@react-navigation/native";
+import axios from "axios";
+import { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
   useColorScheme,
-  Dimensions,
+  View
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import axios from "axios";
 import SummaryApi from "../common/SummaryApi";
-import UserProductCart from "../components/UserProductCart";
-import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
+import UserProductCart from "../components/UserProductCart";
 import { sortProductsByUserInterest } from "../helper/sortByUserInterest";
-
-const screenWidth = Dimensions.get("window").width;
+import { generateOptimizedVariants } from "../helper/variantUtils";
 
 const SearchResultScreen = () => {
-  const navigation = useNavigation();
   const route = useRoute();
   const colorScheme = useColorScheme(); // 🌙 detect dark mode
   const isDarkMode = colorScheme === "dark";
@@ -49,36 +45,8 @@ const SearchResultScreen = () => {
 
         
       const optimizedProducts = useMemo(() => {
-        const result = [];
-        const variantGroups = [];
-      
-        products.forEach((item) => {
-            const variants = item.variants || [];
-            let maxShow = 1;
-            if (variants.length >= 7) maxShow = 4;
-            else if (variants.length >= 5) maxShow = 3;
-            else if (variants.length >= 3) maxShow = 2;
-      
-            for (let i = 0; i < Math.min(maxShow, variants.length); i++) {
-              if (!variantGroups[i]) variantGroups[i] = [];
-              variantGroups[i].push({
-                _id: item._id,
-                productName: item.productName,
-                selling: item.selling,
-                category: item.category,
-                subCategory: item.subCategory,
-                img: variants[i]?.images?.[0],
-                variantColor: variants[i]?.color || null,
-                trandingProduct: item.trandingProduct,
-              });
-            }
-        });
-      
-        variantGroups.forEach((group) => {
-          result.push(...group);
-        });
-      
-        return result;
+      const optimizedProductsResult = generateOptimizedVariants(products)
+        return optimizedProductsResult;
       }, [products]); // ✅ Dependency
       
       useEffect(() => {
@@ -135,7 +103,7 @@ const SearchResultScreen = () => {
                 fontSize: 13,
               }}
             >
-              {price === null ? "All" : `৳${price} or less`}
+              {price === null ? "All" : `৳1~৳${price}`}
             </Text>
           </TouchableOpacity>
         ))}
@@ -174,14 +142,14 @@ const SearchResultScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 95,
-    // backgroundColor: "#fff",
-    backfaceVisibility:"#dad3c5"
+    paddingTop: 95-15,
+    backgroundColor: "##dad3c5",
+    // backfaceVisibility:"#dad3c5"
   },
   scrollContainer: {
-    paddingTop: 10,
-    paddingHorizontal: 12,
-    marginBottom:75
+    paddingTop: 2,
+    paddingHorizontal: 3,
+    marginBottom:55
   },
   header: {
     flexDirection: "row",
@@ -203,7 +171,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 5,
     flexWrap: "wrap",
   },
   filterBtn: {
@@ -217,7 +185,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   column: {
-    width: (screenWidth - 30) / 2,
+    // width: (screenWidth - 30) / 2,
+    width: "49.5%" 
   },
   cardWrapper: {
     marginBottom: 6,

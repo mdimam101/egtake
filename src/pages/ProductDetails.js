@@ -32,6 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import isEqual from "lodash.isequal";
 import { canon, ensureHttps } from "../common/urlUtils";
 import { trackBasic } from "../helper/trackBasic";
+import { generateOptimizedVariants } from "../helper/variantUtils";
 
 const Stars = ({ value = 0, size = 14 }) => (
   <View style={{ flexDirection: "row" }}>
@@ -267,46 +268,10 @@ const ProductDetails = ({ route }) => {
     }
   }, [id]);
 
+  //show categoru wise products
   const optimizedProducts = useMemo(() => {
-    const groupedVariants = {};
-    recommendedProducts.forEach((item) => {
-      const variants = item.variants || [];
-      let maxShow =
-        variants.length >= 7
-          ? 4
-          : variants.length >= 5
-          ? 3
-          : variants.length >= 2
-          ? 2
-          : 1;
-
-      for (let i = 0; i < Math.min(maxShow, variants.length); i++) {
-        const variant = {
-          _id: item._id,
-          productName: item.productName,
-          selling: item.selling,
-          category: item.category,
-          subCategory: item.subCategory,
-          img: variants[i]?.images?.[0],
-          variantColor: variants[i]?.color || null,
-          variantSize: variants[i]?.size || null,
-          trandingProduct: item.trandingProduct,
-        };
-        if (!groupedVariants[item._id]) groupedVariants[item._id] = [];
-        groupedVariants[item._id].push(variant);
-      }
-    });
-
-    const result = [];
-    const maxVariants = Math.max(
-      ...Object.values(groupedVariants).map((g) => g.length)
-    );
-    for (let i = 0; i < maxVariants; i++) {
-      for (const group of Object.values(groupedVariants)) {
-        if (group[i]) result.push(group[i]);
-      }
-    }
-    return result;
+    const optimizedProductsResult = generateOptimizedVariants(recommendedProducts);
+    return optimizedProductsResult;
   }, [recommendedProducts]);
 
   // 1️⃣ After getting `data.variants`, dynamically check:
@@ -314,10 +279,6 @@ const ProductDetails = ({ route }) => {
   const selectedVariant = data.variants[selectedVariantIndex] || {};
   const variantSizes = selectedVariant.sizes || [];
   const isSizeAvailable = variantSizes.some((s) => s.size?.trim());
-  // console.log(
-  //   "Filtered Valid Sizes 🧪",
-  //   variantSizes.filter((s) => s.size?.trim())
-  // );
 
   const getStockBySize = (size) => {
     const sizeObjWithStk = variantSizes.find((s) => s.size === size);
@@ -346,9 +307,13 @@ const ProductDetails = ({ route }) => {
 
   // ✅ Only validate size if sizes are available
   const handleAddToCart = async () => {
-    // 🔒 যদি লগইন না থাকে → Login পেজে নিয়ে যাবে
+    // 🔒 যদি লগইন না থাকে → Login / create account পেজে নিয়ে যাবে
     if (!user?._id) {
-      navigation.navigate("Login");
+      // navigation.navigate("Login");
+      navigation.navigate("Signup");
+      //  navigation.navigate("Signup", { id: data._id, 
+      //     image: selectedImg});
+      //      console.log("🦌◆selectedIm11111", selectedImg);
       return;
     }
 

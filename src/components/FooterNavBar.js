@@ -19,7 +19,7 @@ const FooterNavBar = () => {
   const hideFooterOnRoutes = ["CheckoutPage", "ProductDetails"];
   if (hideFooterOnRoutes.includes(currentRouteName)) return null;
 
-  const redirectURL = user?._id ? "Profile" : "Login";
+  const redirectURL = user?._id ? "Profile" : "Signup";
 
   // helper: কোন বাটন active
   const isActive = (name) => currentRouteName === name;
@@ -77,7 +77,7 @@ const FooterNavBar = () => {
         )}
       </TouchableOpacity>
 
-      {/* Account (Profile/Login) */}
+      {/* Account (Profile/Signup) */}
       <TouchableOpacity
         onPress={() => navigation.navigate(redirectURL)}
         disabled={isActive(redirectURL)}

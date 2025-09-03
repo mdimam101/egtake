@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+
 import axios from "axios";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
-import UserProductCart from "../components/UserProductCart";
 import CategoryListBar from "../components/CategoryListBar"; // same as homepage top bar
 import SearchBar from "../components/SearchBar";
-import { useSelector } from "react-redux";
+import UserProductCart from "../components/UserProductCart";
+import { generateOptimizedVariants } from "../helper/variantUtils";
 
 const SubCategoryWiseProduct = ({ route }) => {
   const { subCategory } = route.params; // ✅ React Native equivalent of useParams()
@@ -19,7 +21,10 @@ const SubCategoryWiseProduct = ({ route }) => {
   const getAllProductFromStore = useSelector(
     (state) => state.productState.productList
   );
-// console.log("🦌subCategory", subCategory);
+
+  // ✅ Scroll fix: keep a ref to ScrollView and a key to force remount
+  const scrollRef = useRef(null);
+  const [svKey, setSvKey] = useState(0);
 
   const fetchWishCategoryProduct = async () => {
     try {
@@ -43,13 +48,13 @@ const SubCategoryWiseProduct = ({ route }) => {
   };
 
   useEffect(() => {
-      // when click in category list bar
+    // when click in category list bar
     if (selectedCategory) {
       const categoryWise = getAllProductFromStore.filter(
         (item) =>
           item.category?.toLowerCase() === selectedCategory.toLowerCase()
       );
-      // console.log("filtered:", selectedCategory, categoryWise);
+
       const prioritizeProducts = async () => {
         setSortedProducts(categoryWise);
 
@@ -63,6 +68,7 @@ const SubCategoryWiseProduct = ({ route }) => {
         setColumnRight(right);
       };
 
+      // 👇 আপনার আগের গার্ড রাখা হলো (logic untouched)
       if (optimizedProducts.length > 0) {
         prioritizeProducts();
       }
@@ -71,36 +77,10 @@ const SubCategoryWiseProduct = ({ route }) => {
     }
   }, [subCategory, selectedCategory]);
 
+  // ✅ HOME-STYLE variant interleave (already your util)
   const optimizedProducts = useMemo(() => {
-    const result = [];
-    const variantGroups = [];
-    wishSubProductList.forEach((item) => {
-      const variants = item.variants || [];
-      let maxShow = 1;
-      if (variants.length >= 7) maxShow = 4;
-      else if (variants.length >= 5) maxShow = 3;
-      else if (variants.length >= 3) maxShow = 2;
-
-      for (let i = 0; i < Math.min(maxShow, variants.length); i++) {
-        if (!variantGroups[i]) variantGroups[i] = [];
-        variantGroups[i].push({
-          _id: item._id,
-          productName: item.productName,
-          selling: item.selling,
-          category: item.category,
-          subCategory: item.subCategory,
-          img: variants[i]?.images?.[0],
-          variantColor: variants[i]?.color || null,
-          trandingProduct: item.trandingProduct,
-        });
-      }
-    });
-
-    variantGroups.forEach((group) => {
-      result.push(...group);
-    });
-
-    return result;
+    const optimized = generateOptimizedVariants(wishSubProductList);
+    return optimized;
   }, [wishSubProductList]); // ✅ Dependency
 
   useEffect(() => {
@@ -122,27 +102,56 @@ const SubCategoryWiseProduct = ({ route }) => {
     }
   }, [optimizedProducts]);
 
+  // ====== 🔧 SCROLL ISSUE FIXES (minimal) ======
+
+  // 1) Category change → remount ScrollView + scroll to top
+  const handleSelectCategory = (cat) => {
+    setSelectedCategory(cat);
+    setSvKey((k) => k + 1); // force re-mount to drop old scroll offset
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo?.({ y: 0, animated: false });
+    });
+  };
+
+  // 2) Route subCategory change → ensure top as well
+  useEffect(() => {
+    setSvKey((k) => k + 1); // re-mount when route changes
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo?.({ y: 0, animated: false });
+    });
+  }, [subCategory]);
+
   return (
     <View style={styles.container}>
       <SearchBar />
       {/* 🔹 Top fixed category bar */}
-      <CategoryListBar //subCategory={subCategory} // or dynamic from route.params.subCategory
-      onSelectCategory={(cat) => setSelectedCategory(cat)} />
+      <CategoryListBar onSelectCategory={handleSelectCategory} />
 
       {/* 🔹 Product grid section */}
-      <ScrollView contentContainerStyle={styles.gridContainer}>
+      <ScrollView
+        key={`sv-${selectedCategory ?? "all"}-${subCategory}-${svKey}`} // ✅ re-mount per change
+        ref={scrollRef}                                                // ✅ control scroll
+        contentContainerStyle={styles.gridContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {sortedProducts.length > 0 ? (
           <View style={styles.masonryContainer}>
             <View style={styles.column}>
               {columnLeft.map((item, index) => (
-                <View key={index} style={styles.cardWrapper}>
+                <View
+                  key={(item.cardKey || item._id || "L") + "-" + index} // stable-ish key
+                  style={styles.cardWrapper}
+                >
                   <UserProductCart productData={item} />
                 </View>
               ))}
             </View>
             <View style={styles.column}>
               {columnRight.map((item, index) => (
-                <View key={index} style={styles.cardWrapper}>
+                <View
+                  key={(item.cardKey || item._id || "R") + "-" + index}
+                  style={styles.cardWrapper}
+                >
                   <UserProductCart productData={item} />
                 </View>
               ))}
@@ -161,14 +170,14 @@ const SubCategoryWiseProduct = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: '#fff',
-    backfaceVisibility: "#fff",
-    paddingTop: 90-10,
+   backgroundColor: "#F2F2F2",
+    // backfaceVisibility: "#fff",
+    paddingTop: 90 - 10,
   },
   gridContainer: {
-    paddingTop: 40,
-    paddingHorizontal: 10,
-    paddingBottom: 80,
+    paddingTop: 30,
+    paddingHorizontal: 5,
+    paddingBottom: 60,
   },
   masonryContainer: {
     flexDirection: "row",

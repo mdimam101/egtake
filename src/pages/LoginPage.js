@@ -31,13 +31,20 @@ const LoginPage = () => {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+
+    // ✅ Always normalize email before API call
+    const normalizedEmail = (data.email || "").trim().toLowerCase();
+
     try {
       const response = await axios({
         method: SummaryApi.signIn.method,
         url: SummaryApi.signIn.url,
         headers: { "Content-Type": "application/json" },
         withCredentials: true, // ✅ MUST for cookie auth
-        data,
+        data: {
+          email: normalizedEmail,   // <<— force lowercase here
+          password: data.password,
+        },
       });
 
       if (response.data.success) {
@@ -97,12 +104,12 @@ const LoginPage = () => {
             onSubmitEditing={handleSubmit}
           />
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => navigation.navigate("ForgotPassword")}
             disabled={isSubmitting}
           >
             <Text style={styles.link}>Forgot Password?</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={[styles.button, isSubmitting && styles.buttonDisabled]}
@@ -114,11 +121,7 @@ const LoginPage = () => {
                 {isSubmitting ? "Logging in..." : "Login"}
               </Text>
               {isSubmitting && (
-                <ActivityIndicator
-                  size="small"
-                  color="#fff"
-                  style={{ marginLeft: 8 }}
-                />
+                <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 8 }} />
               )}
             </View>
           </TouchableOpacity>
@@ -128,7 +131,7 @@ const LoginPage = () => {
             disabled={isSubmitting}
           >
             <Text style={styles.footerText}>
-              {infoText} <Text style={styles.linkText}>Sign up</Text>
+              {infoText} <Text style={styles.linkText}>Create account</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderColor: "#ddd",
     borderWidth: 1,
-    color: "#111", // ✅ force visible text (fixes white-on-white in Dark Mode)
+    color: "#111", // ✅ visible text
   },
   button: {
     backgroundColor: "#1e90ff",

@@ -162,7 +162,7 @@ const CheckoutPage = () => {
     return 9;
   }, [formData.district, baseTotal]);
 
-  const saveMoney = baseTotal > 1500 ? 150 : 0;
+  const saveMoney = baseTotal > 3000 ? 150 : 0;
 
   const Subtotal =
     baseTotal +
@@ -647,7 +647,7 @@ const CheckoutPage = () => {
           {saveMoney > 0 && (
             <View style={styles.summaryRow}>
               <Text style={[styles.labelText, { color: "green" }]}>
-                ৳150 OFF
+               ৳3000+ ৳150 OFF
               </Text>
               <Text style={[styles.amountText, { color: "green" }]}>
                 -৳{saveMoney}
