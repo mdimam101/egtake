@@ -49,7 +49,23 @@ const Stars = ({ value = 0, size = 14 }) => (
 );
 
 const { width: screenWidth } = Dimensions.get("window");
-const ALL_SIZES = ["S", "M", "L", "XL", "XXL"];
+const SIZE_TYPE_LETTER = ["S", "M", "L", "XL", "XXL"];
+const SIZE_TYPE_NUMBER = [
+  "22",
+  "24",
+  "26",
+  "28",
+  "30",
+  "32",
+  "34",
+  "36",
+  "38",
+  "40",
+  "42",
+  "44",
+  "46",
+  "48",
+];
 
 const ProductDetails = ({ route }) => {
   const { id, variantColor, variantSize, image } = route.params;
@@ -270,7 +286,8 @@ const ProductDetails = ({ route }) => {
 
   //show categoru wise products
   const optimizedProducts = useMemo(() => {
-    const optimizedProductsResult = generateOptimizedVariants(recommendedProducts);
+    const optimizedProductsResult =
+      generateOptimizedVariants(recommendedProducts);
     return optimizedProductsResult;
   }, [recommendedProducts]);
 
@@ -279,6 +296,16 @@ const ProductDetails = ({ route }) => {
   const selectedVariant = data.variants[selectedVariantIndex] || {};
   const variantSizes = selectedVariant.sizes || [];
   const isSizeAvailable = variantSizes.some((s) => s.size?.trim());
+
+  let isNumberType = false;
+  // check Size tyep(Number Or Letter)
+  if (data.variants.length > 1) {
+    const isNumeric = (v) =>
+      v?.toString().trim() !== "" && Number.isFinite(Number(v));
+    isNumberType = isNumeric(data.variants[0]?.sizes[0]?.size);
+  }
+
+  const SelectTSizeType = isNumberType ? SIZE_TYPE_NUMBER : SIZE_TYPE_LETTER;
 
   const getStockBySize = (size) => {
     const sizeObjWithStk = variantSizes.find((s) => s.size === size);
@@ -311,7 +338,7 @@ const ProductDetails = ({ route }) => {
     if (!user?._id) {
       // navigation.navigate("Login");
       navigation.navigate("Signup");
-      //  navigation.navigate("Signup", { id: data._id, 
+      //  navigation.navigate("Signup", { id: data._id,
       //     image: selectedImg});
       //      console.log("🦌◆selectedIm11111", selectedImg);
       return;
@@ -574,7 +601,7 @@ const ProductDetails = ({ route }) => {
           <>
             <Text style={styles.sizeLabel}>Select Size</Text>
             <View style={styles.sizeOptions}>
-              {ALL_SIZES.map((size) => {
+              {SelectTSizeType.map((size) => {
                 const stock = getStockBySize(size);
                 const disabled = stock === 0;
                 return (
@@ -648,16 +675,15 @@ const ProductDetails = ({ route }) => {
             >
               <View>
                 <View style={styles.policyRowJustify}>
-                  <Text style={styles.policyTitle}>
-                    🚚 Free delivery 
-                  </Text>
+                  <Text style={styles.policyTitle}>🚚 Free delivery</Text>
                   <Text style={styles.arrow}>›</Text>
                 </View>
                 {/* <Text style={[styles.policySubText, {paddingLeft:20}]}>
                 </Text> */}
                 <Text style={styles.policyCheck}>
-                    <Text style={{ color: "green" }}>✓</Text> when eligible—tap here for details.
-                  </Text>
+                  <Text style={{ color: "green" }}>✓</Text> when eligible—tap
+                  here for details.
+                </Text>
               </View>
             </TouchableOpacity>
 
