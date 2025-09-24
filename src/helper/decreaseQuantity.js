@@ -1,6 +1,5 @@
 import axios from 'axios';
 import SummaryApi from '../common/SummaryApi';
-import { ToastAndroid } from 'react-native';
 
 const decreaseQuantity = async (cartItemId) => {
   try {
@@ -20,7 +19,7 @@ const decreaseQuantity = async (cartItemId) => {
     }
 
     return result;
-  } catch (err) {
+  } catch {
     // console.error('Decrease quantity error:', err);
     // ToastAndroid.show("Error decreasing quantity", ToastAndroid.SHORT);
     return { success: false };

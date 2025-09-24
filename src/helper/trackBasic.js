@@ -11,7 +11,7 @@ export async function trackBasic(type, extra = {}) {
   } catch {}
 }
 
-// EXACT usage (আপনার চাওয়া মতো):
+// EXACT usage
 // trackBasic('visit_app');
 // trackBasic('category_click', { subCategory: 'men-shoes' });
 // trackBasic('search', { term: 'air max' });

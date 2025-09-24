@@ -1,18 +1,17 @@
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import {
+  Image,
   Modal,
-  View,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  StyleSheet,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";       // your Cloudinary helper
+//import * as ImagePicker from "expo-image-picker";       // your Cloudinary helper
 import InAppCameraSheet from "../components/InAppCameraSheet"; // ⬅️ your in-app camera
-import uploadImage from "../helper/uploadImage";
 
 const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, orderId, itemId }) => {
   const [reviewText, setReviewText] = useState("");
@@ -36,7 +35,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
   );
 
   // 🖼 Gallery (multi)
-  const pickImages = async () => {
+  /*const pickImages = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
       quality: 0.8,
@@ -51,10 +50,10 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
       setImages((prev) => [...prev, ...selected]);
       selected.forEach((img) => handleUpload(img.uri));
     }
-  };
+  };*/
 
   // ☁️ Upload to Cloudinary
-  const handleUpload = async (uri) => {
+  /*const handleUpload = async (uri) => {
     const file = { uri, type: "image/jpeg", name: "review.jpg" };
     const res = await uploadImage(file);
     setImages((prev) =>
@@ -63,7 +62,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
       )
     );
   };
-
+*/
   // ❌ remove
   const removeImage = (uri) => {
     setImages((prev) => prev.filter((img) => img.uri !== uri));
@@ -142,10 +141,10 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
 
           {/* Add images buttons */}
           <View style={{ flexDirection: "row", marginTop: 10, gap: 10 }}>
-            <TouchableOpacity style={styles.pickBtn} onPress={pickImages}>
+            {/* <TouchableOpacity style={styles.pickBtn} onPress={pickImages}>
               <Ionicons name="image" size={20} color="#fff" />
               <Text style={styles.pickBtnText}>Gallery</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* ⬇️ তোমার দেওয়া pattern: showCam + InAppCameraSheet */}
             <TouchableOpacity style={styles.pickBtn} onPress={() => setShowCam(true)}>

@@ -1,8 +1,8 @@
 // InAppCameraSheet.js
-import React, { useRef, useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal, Image, Alert, ActivityIndicator } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Image, Modal, Text, TouchableOpacity, View } from "react-native";
 import uploadImage from "../helper/uploadImage";
 
 export default function InAppCameraSheet({ visible, onClose, onTaken }) {

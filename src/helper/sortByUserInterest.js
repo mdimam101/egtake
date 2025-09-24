@@ -32,8 +32,7 @@ export const sortProductsByUserInterest = async (products = []) => {
     const fallback = products.filter((p) => !shownIds.has(p._id));
 
     return [...interestProducts, ...fallback];
-  } catch (err) {
-    // console.log("❌ Interest sort failed:", err);
+  } catch {
     return products;
   }
 };

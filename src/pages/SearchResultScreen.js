@@ -76,15 +76,6 @@ const SearchResultScreen = () => {
         { backgroundColor: isDarkMode ? "#dad3c5" : "#fff" },
       ]}
     >
-      {/* 🔙 Header */}
-      {/* <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={isDarkMode ? "#fff" : "#333"} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: isDarkMode ? "#fff" : "#333" }]}>
-          Results for: <Text style={{ color: "#e91e63" }}>{query}</Text>
-        </Text>
-      </View> */}
 
       {/* 🔘 Filter Buttons */}
       <View style={styles.filterRow}>

@@ -30,7 +30,9 @@ import { increaseUserInterest } from "../helper/userInterestHelper";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import isEqual from "lodash.isequal";
+import Toast from "react-native-toast-message";
 import { canon, ensureHttps } from "../common/urlUtils";
+import { pushGuestCartUnique } from "../helper/guestCart";
 import { trackBasic } from "../helper/trackBasic";
 import { generateOptimizedVariants } from "../helper/variantUtils";
 
@@ -248,6 +250,8 @@ const ProductDetails = ({ route }) => {
           if (!isEqual(fresh, cached)) {
             hydrateUI(fresh); // only if changed
           }
+          // tracking
+          trackBasic("product_view", { subCategory: fresh.subCategory });
 
           // 🔁 recommendations
           // const reco = await axios({
@@ -260,13 +264,10 @@ const ProductDetails = ({ route }) => {
           // console.log("🦌◆recoreco.data.data",reco.data.data);
           // setRecommendedProducts(reco.data.data || []);
           // }
-
-          // tracking
-          trackBasic("product_view", { subCategory: fresh.subCategory });
         }
-      } catch (err) {
-        // console.log("❌ Product fetch error", err.message);
-      } finally {
+      } catch {} 
+      
+      finally {
         setLoading(false);
       }
     };
@@ -334,35 +335,42 @@ const ProductDetails = ({ route }) => {
 
   // ✅ Only validate size if sizes are available
   const handleAddToCart = async () => {
-    // 🔒 যদি লগইন না থাকে → Login / create account পেজে নিয়ে যাবে
-    if (!user?._id) {
-      // navigation.navigate("Login");
-      navigation.navigate("Signup");
-      //  navigation.navigate("Signup", { id: data._id,
-      //     image: selectedImg});
-      //      console.log("🦌◆selectedIm11111", selectedImg);
-      return;
-    }
-
     if (isSizeAvailable && !selectedSize) {
       Alert.alert("Please select a size.");
       return;
-    } else if (data.variants.length < 1) {
+    } else if (isColorAvailable && data.variants.length < 1) {
       Alert.alert("Please select a color.");
       return;
     }
 
-    await addToCart({
+    const payload = {
       productId: data._id,
+      productName: data.productName,
       size: isSizeAvailable ? selectedSize : "",
       color: isColorAvailable ? selectedVariant?.color : "",
-      image: selectedImg.replace("https://", "http://"),
+      image: (selectedImg || "").replace("https://", "http://"),
       price: data.price,
       selling: data.selling,
-    });
+    };
 
-    fetchUserAddToCart(true);
-    trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
+    // ✅ Not logged in → guest cart (duplicate block)
+    if (!user?._id) {
+      // payload.isStoreData = true
+      const res = await pushGuestCartUnique(payload);
+      if (res.added) {
+        fetchUserAddToCart(false);
+        trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
+        Toast.show({ type: "success", text1: "Added to cart" });
+      } else {
+        Toast.show({ type: "info", text1: "Already in cart" }); // duplicate হলে
+      }
+    } else {
+      // ✅ Logged-in → server cart as-is
+      await addToCart(payload);
+      fetchUserAddToCart(true);
+      trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
+      Toast.show({ type: "success", text1: "Added to cart" });
+    }
   };
 
   const openCommitmentModal = (title, detail) => {
@@ -456,11 +464,6 @@ const ProductDetails = ({ route }) => {
 
               setSelectedImg(currentImage);
               setCurrentIndex(index);
-
-              // ✅ Use imageVariantMap instead of looping all variants
-              // const found = imageVariantMap.find(
-              //   (item) => item.image === currentImage
-              // );
 
               // currentImage কে canonical key বানিয়ে map-এ খুঁজি
               const currentKey = canon(currentImage);

@@ -1,7 +1,6 @@
 // FullscreenImageModal.js
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { StatusBar } from "expo-status-bar"; // ✅ use expo-status-bar
 import { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
@@ -158,7 +157,7 @@ const renderItem = ({ item }) => (
       hardwareAccelerated
     >
       {/* ✅ Keep status bar visible with light icons while modal is open */}
-      <StatusBar style="light" backgroundColor="rgba(0,0,0,0.001)" translucent />
+      {/* <StatusBar style="light" backgroundColor="rgba(0,0,0,0.001)" translucent /> */}
 
       <GestureHandlerRootView style={{ flex: 1 }}>
       {/* <View style={{height:40, backfaceVisibility:"#000"}}></View> */}

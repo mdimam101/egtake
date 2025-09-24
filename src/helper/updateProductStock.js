@@ -1,9 +1,8 @@
 import axios from 'axios';
 import SummaryApi from '../common/SummaryApi';
-// import { toHttp } from '../common/urlUtils';
 
 const updateProductStock = async (productId, variantImage, size, quantity) => {
-  // const imgConvertTohttp = toHttp(variantImage) 
+
   try {
     const res = await axios.put(
       SummaryApi.updateProductStock.url,
@@ -19,8 +18,8 @@ const updateProductStock = async (productId, variantImage, size, quantity) => {
       }
     );
     return res.data;
-  } catch (err) {
-    console.error('Stock update failed:', err);
+  } catch {
+    //  console.error('Stock update failed:');
     return { success: false };
   }
 };

@@ -1,12 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Dimensions, ScrollView, StyleSheet, Text, View } from "react-native";
 import SummaryApi from "../common/SummaryApi";
 import UserProductCart from "../components/UserProductCart";
 import { sortProductsByUserInterest } from "../helper/sortByUserInterest";
@@ -17,7 +11,7 @@ const screenWidth = Dimensions.get("window").width;
 const CategoryWiseProductPage = ({ route }) => {
   const { categoryName } = route.params;
   const [wishProductList, setWishProductList] = useState([]);
-   const [sortedProducts, setSortedProducts] = useState([]);
+  const [sortedProducts, setSortedProducts] = useState([]);
 
   const fetchWishCategoryProduct = async () => {
     try {
@@ -31,9 +25,7 @@ const CategoryWiseProductPage = ({ route }) => {
       if (res.data.success) {
         setWishProductList(res.data.data || []);
       }
-    } catch (error) {
-      // console.log("❌ Error fetching category product:", error.message);
-    }
+    } catch {}
   };
 
   useEffect(() => {
@@ -42,9 +34,9 @@ const CategoryWiseProductPage = ({ route }) => {
 
   // ✅ HOME-STYLE: সব variants interleave + no-variant fallback
   const optimizedProducts = useMemo(() => {
-   const optimizedProductsResult = generateOptimizedVariants(wishProductList);
+    const optimizedProductsResult = generateOptimizedVariants(wishProductList);
     return optimizedProductsResult;
-  }, [wishProductList]); // ✅ Dependency ঠিক আছে 
+  }, [wishProductList]); // ✅ Dependency ঠিক আছে
 
   useEffect(() => {
     const prioritizeProducts = async () => {

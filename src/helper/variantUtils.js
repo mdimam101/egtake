@@ -30,6 +30,9 @@ export const generateOptimizedVariants = (products = []) => {
         variantColor: null,
         variantSize: null,
         trandingProduct: !!item.trandingProduct,
+        handCraft: !!item.handCraft,
+        salesOn:!!item.salesOn,
+        displaySalesSlied:!!item.displaySalesSlied,
         createdTs: baseCreatedTs,
         cardKey: `${item._id}::${(item?.img || item?.images?.[0] || "noimg")}`,
       };
@@ -53,6 +56,9 @@ export const generateOptimizedVariants = (products = []) => {
         variantColor: vv?.color ?? null,
         variantSize: vv?.size ?? null,
         trandingProduct: !!item.trandingProduct,
+        handCraft: !!item.handCraft,
+        salesOn:!!item.salesOn,
+        displaySalesSlied:!!item.displaySalesSlied,// TODO next time implement it
         createdTs: baseCreatedTs,
         cardKey: `${item._id}::${(vv?.images?.[0] || item?.img || item?.images?.[0] || "noimg")}::${k}`,
       };

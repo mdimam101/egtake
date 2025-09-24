@@ -15,12 +15,15 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
 import CheckoutItemCard from "../components/CheckoutItemCard";
 import CustomDropdown from "../components/CustomDropdown"; // keep your existing component
 import SuccessModal from "../components/SuccessModal";
 import Context from "../context";
 import deleteCartItemWhenOrderplace from "../helper/deleteCartItemWhenOrderplace";
+import { GUEST_CART_KEY } from "../helper/guestCart";
 import updateProductStock from "../helper/updateProductStock";
 
 const PLACEHOLDER_COLOR = "#999";
@@ -31,7 +34,6 @@ const CheckoutPage = () => {
   const { fetchUserAddToCart } = useContext(Context);
   const route = useRoute();
   const selectedItems = route.params?.selectedItemsDetails || [];
-  const idArray = selectedItems.map((item) => item._id);
 
   const [errors, setErrors] = useState({});
   const [couponCode, setCouponCode] = useState("");
@@ -41,6 +43,7 @@ const CheckoutPage = () => {
   // ⏳ submit locking
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitLockRef = useRef(false); // extra guard against rapid taps
+  const user = useSelector((state) => state?.userState?.user);
 
   // ✅ shipping form
   const [formData, setFormData] = useState({
@@ -162,15 +165,15 @@ const CheckoutPage = () => {
     return 9;
   }, [formData.district, baseTotal]);
 
-  const saveMoney = baseTotal > 3000 ? 150 : 0;
+  // if order 3000+ then -150Tk
+  //const saveMoney = baseTotal > 3000 ? 150 : 0;
 
   const Subtotal =
     baseTotal +
     deliveryCharge +
     handlingCharge +
     processingFee -
-    discount -
-    saveMoney;
+    discount // if needed(-saveMoney);
 
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -225,6 +228,10 @@ const CheckoutPage = () => {
   };
 
   const handleSubmitOrder = async () => {
+    if (!user?._id) {
+      navigation.navigate("Signup");
+      return;
+    }
     if (isSubmitting || submitLockRef.current) return; // 🚫 prevent double submit
     const { name, phone, address, district } = formData;
     const newErrors = {};
@@ -273,6 +280,11 @@ const CheckoutPage = () => {
       });
 
       if (response?.data?.success) {
+        
+        const idArray = selectedItems
+          .filter((item) => item._id && !item?.isStoreData) // শর্ত মিলে এমনগুলা রাখো
+          .map((item) => item._id); // শুধু _id নাও
+
         await Promise.all(
           selectedItems.map((item) =>
             updateProductStock(
@@ -293,6 +305,8 @@ const CheckoutPage = () => {
           } catch {}
         }
         setModalVisible(true);
+         // যেখানে order confirm success হয়:
+        await clearGuestCart(); // ✅ guest cart মুছে যাবে
         await handleRemove(idArray);
         setModalVisible(true);
       } else {
@@ -305,6 +319,12 @@ const CheckoutPage = () => {
       submitLockRef.current = false;
     }
   };
+
+  //delete local (add to cart data)
+  const clearGuestCart = async () => {
+  await AsyncStorage.removeItem(GUEST_CART_KEY);
+  fetchUserAddToCart(false);
+};
 
   const handleRemove = async (productIdArray) => {
     const result = await deleteCartItemWhenOrderplace(productIdArray);
@@ -413,48 +433,49 @@ const CheckoutPage = () => {
             )}
 
             {/* FREE (standard) */}
-           <TouchableOpacity
-  style={[
-    styles.optionCard,
-    deliveryOption === "FREE" && styles.optionCardActive,
-    (isSubmitting || freeDisabled) && styles.disabledCard, // 🔒 visual lock
-  ]}
-  onPress={() => {
-    if (isSubmitting || freeDisabled) return; // 🔒 block click
-    setDeliveryOption("FREE");
-    setUserTouchedDelivery(true);
-  }}
-  disabled={isSubmitting || freeDisabled}
->
-  <View style={styles.radioDotWrap}>
-    <View
-      style={[
-        styles.radioDot,
-        deliveryOption === "FREE" && styles.radioDotActive,
-      ]}
-    />
-  </View>
-  <View style={{ flex: 1 }}>
-    <Text style={styles.optionTitle}>
-      {formData.district === "Narayanganj"
-        ? "Free Delivery Mini ৳499+"
-        : `Delivery commitment`}
-    </Text>
-    <Text style={styles.optionSub}>
-      {formData.district === "Narayanganj"
-        ? `Delivery time 3–36 hours \n Minimum Order ৳499+${freeDisabled ? "" : ""}`
-        : formData.district === "Dhaka"
-        ? `Delivery time within 48 hours`
-        : "Delivery time within 1~3 days"}
-    </Text>
-  </View>
-  <Text style={styles.optionPrice}>
-    {formData.district === "Narayanganj"
-      ? "FREE"
-      : `৳${districtCharge(formData.district)}`}
-  </Text>
-</TouchableOpacity>
-
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                deliveryOption === "FREE" && styles.optionCardActive,
+                (isSubmitting || freeDisabled) && styles.disabledCard, // 🔒 visual lock
+              ]}
+              onPress={() => {
+                if (isSubmitting || freeDisabled) return; // 🔒 block click
+                setDeliveryOption("FREE");
+                setUserTouchedDelivery(true);
+              }}
+              disabled={isSubmitting || freeDisabled}
+            >
+              <View style={styles.radioDotWrap}>
+                <View
+                  style={[
+                    styles.radioDot,
+                    deliveryOption === "FREE" && styles.radioDotActive,
+                  ]}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.optionTitle}>
+                  {formData.district === "Narayanganj"
+                    ? "Free Delivery Mini ৳499+"
+                    : `Delivery commitment`}
+                </Text>
+                <Text style={styles.optionSub}>
+                  {formData.district === "Narayanganj"
+                    ? `Delivery time 3–36 hours \n Minimum Order ৳499+${
+                        freeDisabled ? "" : ""
+                      }`
+                    : formData.district === "Dhaka"
+                    ? `Delivery time within 48 hours`
+                    : "Delivery time within 1~3 days"}
+                </Text>
+              </View>
+              <Text style={styles.optionPrice}>
+                {formData.district === "Narayanganj"
+                  ? "FREE"
+                  : `৳${districtCharge(formData.district)}`}
+              </Text>
+            </TouchableOpacity>
 
             {/* ✅ NEW: Narayanganj Standard (৳120) — only for Narayanganj */}
             {expressAvailable && (
@@ -644,16 +665,16 @@ const CheckoutPage = () => {
             </View>
           )}
 
-          {saveMoney > 0 && (
+          {/* {saveMoney > 0 && (
             <View style={styles.summaryRow}>
               <Text style={[styles.labelText, { color: "green" }]}>
-               ৳3000+ ৳150 OFF
+                ৳3000+ ৳150 OFF
               </Text>
               <Text style={[styles.amountText, { color: "green" }]}>
                 -৳{saveMoney}
               </Text>
             </View>
-          )}
+          )} */}
 
           <View style={[styles.summaryRow, { marginTop: 10 }]}>
             <Text
@@ -672,7 +693,7 @@ const CheckoutPage = () => {
           position: "absolute",
           left: 14,
           right: 14,
-          bottom:  8,
+          bottom: 8,
         }}
       >
         <TouchableOpacity
@@ -713,7 +734,7 @@ const CheckoutPage = () => {
 export default CheckoutPage;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 14, backgroundColor: "#fff" },
+  container: { flex: 1, padding: 14, backgroundColor: "#fff"},
 
   headerTitle: {
     height: 75,

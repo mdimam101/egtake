@@ -1,19 +1,23 @@
-import { configureStore } from '@reduxjs/toolkit';
-import userReducer from '../store/userSlice'; // 🔁 adjust path if needed
-import categoryReducer from '../store/categorySlice'; 
-import productReducer from '../store/allProductSlice'
-import banarReducer from '../store/banarSlice'
-import trendingReducer from '../store/trendingSlice'; 
-import under99Reducer from '../store/under99Slice';
+import { configureStore } from "@reduxjs/toolkit";
+import productReducer from "../store/allProductSlice";
+import banarReducer from "../store/banarSlice";
+import categoryReducer from "../store/categorySlice";
+import handCraftReducer from "../store/handCraftSlice";
+import salesReducer from "../store/salesSlice";
+import trendingReducer from "../store/trendingSlice";
+import under99Reducer from "../store/under99Slice";
+import userReducer from "../store/userSlice"; // 🔁 adjust path if needed
 
 const store = configureStore({
   reducer: {
     userState: userReducer,
     categoryState: categoryReducer, // 🆕 category add
-    productState:productReducer,
+    productState: productReducer,
     banarState: banarReducer,
-     trendingState: trendingReducer,
-     under99State: under99Reducer,
+    trendingState: trendingReducer,
+    handCraftState: handCraftReducer,
+    under99State: under99Reducer,
+    salesState: salesReducer,
   },
 });
 

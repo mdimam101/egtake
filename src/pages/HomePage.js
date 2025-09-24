@@ -27,6 +27,8 @@ import UserSlideProductCard from "../components/UserSlideProductCard";
 import { sortProductsByUserInterest } from "../helper/sortByUserInterest";
 import { generateOptimizedVariants } from "../helper/variantUtils";
 import { setAllProductList } from "../store/allProductSlice";
+import { setHandCraftList } from "../store/handCraftSlice";
+import { setSalesList } from "../store/salesSlice"; // ✅ KEEP: Sales slice
 import { setTrendingList } from "../store/trendingSlice";
 import { setUnder99List } from "../store/under99Slice";
 
@@ -54,9 +56,22 @@ const HomePage = () => {
   const [underPhase, setUnderPhase] = useState([]); // first 6
   const [underAll, setUnderAll] = useState([]); // full list next tick
 
+  // HandCraft 2-phase
+  const [handPhase, setHandPhase] = useState([]);
+  const [handAll, setHandAll] = useState([]);
+
+  // ✅ KEEP: Sales 2-phase (no timer)
+  const [salesPhase, setSalesPhase] = useState([]);
+  const [salesAll, setSalesAll] = useState([]);
+
+  // ✅ KEEP: UI flag for showing Sales section (no countdown)
+  const [showSalesSlide, setShowSalesSlide] = useState(false);
+
   const optimizedProducts = useSelector((s) => s.productState.productList);
   const trendingFromStore = useSelector((s) => s.trendingState.trendingList);
   const under99FromStore = useSelector((s) => s.under99State.under99List);
+  const handFromStore = useSelector((s) => s.handCraftState.handCraftList);
+  const salesFromStore = useSelector((s) => s.salesState.salesList);
   const dispatch = useDispatch();
 
   // ======= HELPERS: updatedAt compare (order-agnostic, O(n)) =======
@@ -96,6 +111,32 @@ const HomePage = () => {
           cachedParsed = JSON.parse(cachedStr);
           const optimized = generateOptimizedVariants(cachedParsed);
           dispatch(setAllProductList(optimized));
+
+          // HandCraft (latest→oldest) + de-dup by _id
+          const handCraftSorted = optimized
+            .filter((p) => p.handCraft)
+            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+          const seenH = new Set();
+          const handCraftUnique = [];
+          for (const it of handCraftSorted) {
+            if (seenH.has(it._id)) continue;
+            seenH.add(it._id);
+            handCraftUnique.push(it);
+          }
+          dispatch(setHandCraftList(handCraftUnique));
+
+          // Sales (latest→oldest) + de-dup by _id
+          const salesSorted = optimized
+            .filter((p) => p.salesOn)
+            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+          const seenS = new Set();
+          const salesUnique = [];
+          for (const it of salesSorted) {
+            if (seenS.has(it._id)) continue;
+            seenS.add(it._id);
+            salesUnique.push(it);
+          }
+          dispatch(setSalesList(salesUnique));
 
           // Trending (latest→oldest) + de-dup by _id
           const trendingSorted = optimized
@@ -146,6 +187,33 @@ const HomePage = () => {
           const optimized = generateOptimizedVariants(newData);
           dispatch(setAllProductList(optimized));
 
+          //when needUpdate HandCraft  (latest→oldest) + de-dup by _id
+          const handCraftSorted = optimized
+            .filter((p) => p.handCraft)
+            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+          const seenH2 = new Set();
+          const handCraftUnique2 = [];
+          for (const it of handCraftSorted) {
+            if (seenH2.has(it._id)) continue;
+            seenH2.add(it._id);
+            handCraftUnique2.push(it);
+          }
+          dispatch(setHandCraftList(handCraftUnique2));
+
+          //when needUpdate Sales  (latest→oldest) + de-dup by _id
+          const SalesSorted = optimized
+            .filter((p) => p.salesOn)
+            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+          const seenS2 = new Set();
+          const salesUnique2 = [];
+          for (const it of SalesSorted) {
+            if (seenS2.has(it._id)) continue;
+            seenS2.add(it._id);
+            salesUnique2.push(it);
+          }
+          dispatch(setSalesList(salesUnique2));
+
+          //when needUpdate trending  (latest→oldest) + de-dup by _id
           const trendingSorted = optimized
             .filter((p) => p.trandingProduct)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
@@ -158,6 +226,7 @@ const HomePage = () => {
           }
           dispatch(setTrendingList(trendingUnique2));
 
+          //when needUpdate Under99  (latest→oldest) + de-dup by _id
           const under99Sorted = optimized
             .filter((p) => (p.selling ?? Infinity) <= 99)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
@@ -186,6 +255,13 @@ const HomePage = () => {
     setLoading(false);
     // }
   }, []);
+
+  // ✅ KEEP: store hydrated → instantly show section
+  useEffect(() => {
+    if (salesFromStore && salesFromStore.length > 0) {
+      setShowSalesSlide((prev) => prev || true);
+    }
+  }, [salesFromStore]);
 
   // ============== IMAGE PREFETCH HELPERS ==============
   const serialPrefetch = async (urls = []) => {
@@ -254,14 +330,50 @@ const HomePage = () => {
     return () => clearTimeout(id);
   }, [under99FromStore]);
 
-  // Prefetch images for top-of-sections (no extra state toggles)
+  // HandCraft 2-phase
   useEffect(() => {
-    if (trendingPhase.length === 0 && underPhase.length === 0) return;
+    if (!handFromStore || handFromStore.length === 0) {
+      setHandPhase([]);
+      setHandAll([]);
+      return;
+    }
+    const first6 = handFromStore.slice(0, 6);
+    setHandPhase(first6);
+    setHandAll([]);
+    const id = setTimeout(() => setHandAll(handFromStore), 0);
+    return () => clearTimeout(id);
+  }, [handFromStore]);
+
+  // ✅ KEEP: Sales 2-phase
+  useEffect(() => {
+    if (!salesFromStore || salesFromStore.length === 0) {
+      setSalesPhase([]);
+      setSalesAll([]);
+      return;
+    }
+    const first6 = salesFromStore.slice(0, 6);
+    setSalesPhase(first6);
+    setSalesAll([]);
+    const id = setTimeout(() => setSalesAll(salesFromStore), 0);
+    return () => clearTimeout(id);
+  }, [salesFromStore]);
+
+  // Prefetch images for top-of-sections
+  useEffect(() => {
+    if (
+      trendingPhase.length === 0 &&
+      underPhase.length === 0 &&
+      handPhase.length === 0 &&
+      salesPhase.length === 0
+    )
+      return;
     const jobs = [];
     if (trendingPhase.length) jobs.push(priorityPreloadSlide(trendingPhase, 6));
     if (underPhase.length) jobs.push(priorityPreloadSlide(underPhase, 6));
+    if (handPhase.length) jobs.push(priorityPreloadSlide(handPhase, 6));
+    if (salesPhase.length) jobs.push(priorityPreloadSlide(salesPhase, 6));
     Promise.allSettled(jobs);
-  }, [trendingPhase, underPhase]);
+  }, [trendingPhase, underPhase, handPhase, salesPhase]);
 
   // ============== CLICK GUARD & FOCUS ==============
   useFocusEffect(
@@ -284,12 +396,18 @@ const HomePage = () => {
   // ============== DERIVED LISTS ==============
   const trendingProducts = trendingAll.length ? trendingAll : trendingPhase;
   const under99Products = underAll.length ? underAll : underPhase;
+  const handProducts = handAll.length ? handAll : handPhase;
+  const salesProducts = salesAll.length ? salesAll : salesPhase;
 
   const filteredProducts = selectedCategory
     ? selectedCategory === "_trending"
       ? trendingFromStore
       : selectedCategory === "_below99"
       ? under99FromStore
+      : selectedCategory === "_handcraft"
+      ? handFromStore
+      : selectedCategory === "_sales"
+      ? salesFromStore
       : sortedProducts.filter(
           (item) =>
             item.category?.toLowerCase() === selectedCategory?.toLowerCase()
@@ -328,74 +446,66 @@ const HomePage = () => {
         }::${index}`
       : `last_${index}`;
 
-  const renderTrending = () => {
+  const renderSlide = (rawName) => {
+    // ছোট alias, চাইলে এটা বাদও দিতে পারো যদি সবসময় ঠিক key পাঠাও
+    const slideName = rawName === "tranding" ? "trending" : rawName;
+
+    const targetSlide =
+      slideName === "salesSlide"
+        ? salesProducts
+        : slideName === "handCraft"
+        ? handProducts
+        : slideName === "trending"
+        ? trendingProducts
+        : slideName === "under99"
+        ? under99Products
+        : null;
+
+    const selectCat =
+      slideName === "salesSlide"
+        ? "_sales"
+        : slideName === "handCraft"
+        ? "_handcraft"
+        : slideName === "trending"
+        ? "_trending"
+        : slideName === "under99"
+        ? "_below99"
+        : null;
+
     if (loading) {
       return (
         <View style={{ flexDirection: "row", paddingHorizontal: 10, gap: 4 }}>
-          {[...Array(6)].map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonSlideCard key={i} />
           ))}
         </View>
       );
     }
-    const limitedList = trendingProducts.slice(0, 4);
+
+    if (!targetSlide || !selectCat) return null;
+
+    const limitedList = targetSlide.slice(0, 4);
     const displayList = [...limitedList, { isLast: true }];
+
     return (
       <FlatList
         style={{ paddingLeft: 5 }}
         data={displayList}
-        initialNumToRender={3}
+        initialNumToRender={3} // ← সবগুলোর জন্য 3 একদম OK
         maxToRenderPerBatch={3}
         windowSize={2}
         updateCellsBatchingPeriod={50}
         removeClippedSubviews
         renderItem={({ item }) => (
           <UserSlideProductCard
-            productData={item}
-            isLast={item.isLast}
-            onViewMorePress={() => setSelectedCategory("_trending")}
+            productData={item.isLast ? undefined : item} // last-card safe
+            isLast={!!item.isLast}
+            onViewMorePress={() => setSelectedCategory(selectCat)}
             disabled={item.isLast ? false : !!pressedIds[item._id]}
             pressGuard={item.isLast ? undefined : pressGuard}
           />
         )}
-        keyExtractor={commonKeyExtractor}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      />
-    );
-  };
-
-  const renderShopUnder99 = () => {
-    if (loading) {
-      return (
-        <View style={{ flexDirection: "row", paddingHorizontal: 10, gap: 4 }}>
-          {[...Array(6)].map((_, i) => (
-            <SkeletonSlideCard key={i} />
-          ))}
-        </View>
-      );
-    }
-    const limitedList = under99Products.slice(0, 4);
-    const displayList = [...limitedList, { isLast: true }];
-
-    return (
-      <FlatList
-        style={{ paddingLeft: 5 }}
-        data={displayList}
-        initialNumToRender={4}
-        maxToRenderPerBatch={4}
-        windowSize={2}
-        updateCellsBatchingPeriod={50}
-        removeClippedSubviews
-        renderItem={({ item }) => (
-          <UserSlideProductCard
-            productData={item}
-            isLast={item.isLast}
-            onViewMorePress={() => setSelectedCategory("_below99")}
-            disabled={item.isLast ? false : !!pressedIds[item._id]}
-            pressGuard={item.isLast ? undefined : pressGuard}
-          />
-        )}
+        // ✅ তোমার extractor থাকলেই যথেষ্ট—fallback already আছে
         keyExtractor={commonKeyExtractor}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -451,16 +561,22 @@ const HomePage = () => {
     <View style={styles.container}>
       <SearchBar />
 
-      {selectedCategory === "_trending" || selectedCategory === "_below99" ? (
+      {selectedCategory === "_trending" ||
+      selectedCategory === "_below99" ||
+      selectedCategory === "_handcraft" ||
+      selectedCategory === "_sales" ? (
         <View style={styles.categoryHeader}>
           <TouchableOpacity onPress={() => setSelectedCategory(null)}>
             <Text style={styles.backText}> ☜ Back to All</Text>
-           
           </TouchableOpacity>
           <Text style={styles.categoryTitle}>
             {selectedCategory === "_trending"
               ? "🔥 All Trending Products"
-              : "💸 All 0~99 Products"}
+              : selectedCategory === "_below99"
+              ? "💸 All 0~99 Products"
+              : selectedCategory === "_handcraft"
+              ? "🧵 All Hand Craft Products"
+              : "💥 All Sales Products"}
           </Text>
         </View>
       ) : (
@@ -551,6 +667,19 @@ const HomePage = () => {
                 {/* 🔼 Banner */}
                 <BannerSlider />
 
+                {/* 💥 Sales — only if displaySalesSlied === true (no timer) */}
+                {false && (
+                  <>
+                    <LinearGradient
+                      colors={["#E8F0FF", "#FFFFFF"]}
+                      style={styles.commitHeaderWrapper}
+                    >
+                      <Text style={styles.commitHeaderText}>💥 Sales</Text>
+                    </LinearGradient>
+                    {renderSlide("salesSlide")}
+                  </>
+                )}
+
                 {/* 🔥 Trending */}
                 <LinearGradient
                   colors={["#F8FFB3", "#FDFFE2"]}
@@ -558,7 +687,18 @@ const HomePage = () => {
                 >
                   <Text style={styles.commitHeaderText}>🔥 Trending</Text>
                 </LinearGradient>
-                {renderTrending()}
+                {renderSlide("tranding")}
+
+                {/* 🧵 Hand craft */}
+                <LinearGradient
+                  colors={["#F8FFB3", "#FDFFE2"]}
+                  style={styles.commitHeaderWrapper}
+                >
+                  <Text style={styles.commitHeaderText}>
+                    🧵 Hand craft (হস্ত শিল্প)
+                  </Text>
+                </LinearGradient>
+                {renderSlide("handCraft")}
 
                 {/* 💸 0~99 */}
                 <LinearGradient
@@ -567,14 +707,14 @@ const HomePage = () => {
                 >
                   <Text style={styles.commitHeaderText}>💸 0~99 Shop</Text>
                 </LinearGradient>
-                {renderShopUnder99()}
+                {renderSlide("under99")}
 
-                {/* 🛍 All Products */}
+                {/* 🛍 For You */}
                 <LinearGradient
                   colors={["#BEE4C8", "#FFF8F5"]}
                   style={styles.commitHeaderWrapper}
                 >
-                  <Text style={styles.commitHeaderText}>🛍 All Products</Text>
+                  <Text style={styles.commitHeaderText}>🛍 For You</Text>
                 </LinearGradient>
 
                 <View style={styles.masonryColumns}>
@@ -689,7 +829,7 @@ const styles = StyleSheet.create({
   masonryContainer: { flex: 1, flexDirection: "column" },
   masonryContainerForCategory: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space_between",
     flexWrap: "wrap",
   },
   cardWrapper: { marginBottom: 4 },

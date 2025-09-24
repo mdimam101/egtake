@@ -152,7 +152,8 @@ const SearchBar = () => {
 
 const styles = StyleSheet.create({
   container: {
-    zIndex: 99,
+    position: "relative",      // ✅ anchor for absolute child
+    zIndex: 1000,
     padding: 6,
     // backgroundColor: "#fff",
     marginTop: -45,
@@ -188,12 +189,17 @@ const styles = StyleSheet.create({
     opacity: 0.5, // visual feedback when disabled
   },
   suggestionList: {
-    backgroundColor: "#fff",
-    elevation: 3,
-    borderRadius: 6,
-    marginTop: 4,
-    maxHeight: 200,
-  },
+   position: "absolute",      // ✅ overlay
+   top: 48,                   // ⬅️ input height + margin (মিলে না গেলে 44~56 টিউন করো)
+   left: 6,
+   right: 6,
+   backgroundColor: "#fff",
+   borderRadius: 6,
+   maxHeight: 240,
+   zIndex: 2000,              // ✅ iOS
+   elevation: 20,             // ✅ Android draw on top
+   overflow: "hidden",
+ },
   suggestionItem: {
     flexDirection: "row",
     alignItems: "center",

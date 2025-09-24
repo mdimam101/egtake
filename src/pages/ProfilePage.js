@@ -17,7 +17,6 @@ import {
   Image,
   Linking,
   Modal,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -35,8 +34,7 @@ import { setUserDetails } from "../store/userSlice";
 // 🆕 Support config (replace with your real numbers)
 const SUPPORT_PHONE = "+8801712345678";
 const WHATSAPP_PHONE = "+817045439721";
-const WHATSAPP_MSG =
-  "Hi EgTake";
+const WHATSAPP_MSG = "Hi EgTake";
 
 // ---------- Status constants ----------
 const ORDER_STATUS = {
@@ -65,7 +63,8 @@ const REVIEW_STATUS = {
 // ---------- Normalizers ----------
 const normalizeItemStatus = (s = "") => {
   const t = String(s).toLowerCase().replace(/\s+/g, "");
-  if (t === "returnpending" || t === "return") return ITEM_STATUS.RETURN_PENDING;
+  if (t === "returnpending" || t === "return")
+    return ITEM_STATUS.RETURN_PENDING;
   if (t === "returnconfirmed") return ITEM_STATUS.RETURN_CONFIRMED;
   if (t === "shipped") return ITEM_STATUS.SHIPPED;
   if (t === "delivered") return ITEM_STATUS.DELIVERED;
@@ -91,7 +90,10 @@ async function openDialer(phone) {
     const url = `tel:${phone}`;
     const ok = await Linking.canOpenURL(url);
     if (ok) return Linking.openURL(url);
-    Toast.show({ type: "error", text1: "Calling not supported on this device" });
+    Toast.show({
+      type: "error",
+      text1: "Calling not supported on this device",
+    });
   } catch {
     Toast.show({ type: "error", text1: "Unable to open dialer" });
   }
@@ -100,8 +102,13 @@ async function openDialer(phone) {
 async function openWhats(phone, message = WHATSAPP_MSG) {
   try {
     const clean = String(phone).replace(/[^\d+]/g, "");
-    const appUrl = `whatsapp://send?phone=${clean}&text=${encodeURIComponent(message)}`;
-    const webUrl = `https://wa.me/${clean.replace(/^\+/, "")}?text=${encodeURIComponent(message)}`;
+    const appUrl = `whatsapp://send?phone=${clean}&text=${encodeURIComponent(
+      message
+    )}`;
+    const webUrl = `https://wa.me/${clean.replace(
+      /^\+/,
+      ""
+    )}?text=${encodeURIComponent(message)}`;
     const can = await Linking.canOpenURL(appUrl);
     if (can) return Linking.openURL(appUrl);
     return Linking.openURL(webUrl);
@@ -119,15 +126,14 @@ const Header = ({ cartCount = 0, onSettings, navigation }) => (
         <Ionicons name="settings-outline" size={22} color="#222" />
       </TouchableOpacity>
       <View>
-        <TouchableOpacity
-                  onPress={() => navigation.navigate("CartPage")}
-                  
-                >
-        <Ionicons name="cart-outline" size={22} color="#222" />
+        <TouchableOpacity onPress={() => navigation.navigate("CartPage")}>
+          <Ionicons name="cart-outline" size={22} color="#222" />
         </TouchableOpacity>
         {cartCount > 0 ? (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
+            <Text style={styles.badgeText}>
+              {cartCount > 99 ? "99+" : cartCount}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -136,7 +142,11 @@ const Header = ({ cartCount = 0, onSettings, navigation }) => (
 );
 
 const StatPill = ({ icon, label, value, onPress }) => (
-  <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={0.8}>
+  <TouchableOpacity
+    style={styles.statCard}
+    onPress={onPress}
+    activeOpacity={0.8}
+  >
     <MaterialCommunityIcons name={icon} size={22} color="#1976d2" />
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
@@ -144,7 +154,11 @@ const StatPill = ({ icon, label, value, onPress }) => (
 );
 
 const QuickAction = ({ icon, label, onPress }) => (
-  <TouchableOpacity style={styles.quickAction} onPress={onPress} activeOpacity={0.8}>
+  <TouchableOpacity
+    style={styles.quickAction}
+    onPress={onPress}
+    activeOpacity={0.8}
+  >
     <MaterialCommunityIcons name={icon} size={22} color="#222" />
     <Text style={styles.quickActionLabel}>{label}</Text>
   </TouchableOpacity>
@@ -156,20 +170,46 @@ const Chip = ({ label, active, onPress }) => (
     style={[styles.chip, active ? styles.chipActive : null]}
     activeOpacity={0.9}
   >
-    <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>{label}</Text>
+    <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
+      {label}
+    </Text>
   </TouchableOpacity>
 );
 
-const ConfirmModal = ({ visible, title, cancelText = "Cancel", okText = "Confirm", onCancel, onOk }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+const ConfirmModal = ({
+  visible,
+  title,
+  cancelText = "Cancel",
+  okText = "Confirm",
+  onCancel,
+  onOk,
+}) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="fade"
+    onRequestClose={onCancel}
+  >
     <View style={styles.modalOverlay}>
       <View style={styles.modalContent}>
         <Text style={styles.modalTitle}>{title}</Text>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16 }}>
-          <TouchableOpacity style={[styles.modalBtn, { backgroundColor: "#999" }]} onPress={onCancel}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginTop: 16,
+          }}
+        >
+          <TouchableOpacity
+            style={[styles.modalBtn, { backgroundColor: "#999" }]}
+            onPress={onCancel}
+          >
             <Text style={styles.modalBtnText}>{cancelText}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.modalBtn, { backgroundColor: "#d32f2f" }]} onPress={onOk}>
+          <TouchableOpacity
+            style={[styles.modalBtn, { backgroundColor: "#d32f2f" }]}
+            onPress={onOk}
+          >
             <Text style={styles.modalBtnText}>{okText}</Text>
           </TouchableOpacity>
         </View>
@@ -179,11 +219,21 @@ const ConfirmModal = ({ visible, title, cancelText = "Cancel", okText = "Confirm
 );
 
 const TrackOrderModal = ({ visible, status, onClose }) => {
-  const steps = [ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.SHIPPED, ORDER_STATUS.DELIVERED];
+  const steps = [
+    ORDER_STATUS.PENDING,
+    ORDER_STATUS.CONFIRMED,
+    ORDER_STATUS.SHIPPED,
+    ORDER_STATUS.DELIVERED,
+  ];
   const currentIndex = Math.max(0, steps.indexOf(status));
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Tracking Order</Text>
@@ -191,12 +241,17 @@ const TrackOrderModal = ({ visible, status, onClose }) => {
             source={require("../../assets/animations/delivery.json")}
             autoPlay
             loop
-            style={{ width: 90, height: 90, alignSelf: "center", marginVertical: 8 }}
+            style={{
+              width: 90,
+              height: 90,
+              alignSelf: "center",
+              marginVertical: 8,
+            }}
           />
           <View style={styles.statusRow}>
             {steps.map((step, idx) => {
-              const isCompleted = idx < currentIndex;
-              const isActive = idx === currentIndex;
+              const isCompleted = idx < currentIndex + 1;
+              const isActive = idx === currentIndex + 1;
               return (
                 <View key={step} style={styles.stepItem}>
                   <View
@@ -206,18 +261,33 @@ const TrackOrderModal = ({ visible, status, onClose }) => {
                       isActive && { borderColor: "#1976d2", borderWidth: 2 },
                     ]}
                   >
-                    {isCompleted ? <Ionicons name="checkmark" size={18} color="#fff" /> : (
-                      <Text style={{ fontSize: 10, color: "#999" }}>{idx + 1}</Text>
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                    ) : (
+                      <Text style={{ fontSize: 10, color: "#999" }}>
+                        {idx + 1}
+                      </Text>
                     )}
                   </View>
-                  <Text style={[styles.stepLabel, isActive && { color: "#1976d2", fontWeight: "700" }]}>{step}</Text>
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      isActive && { color: "#1976d2", fontWeight: "700" },
+                    ]}
+                  >
+                    {step}
+                  </Text>
                 </View>
               );
             })}
           </View>
 
-          <TouchableOpacity style={[styles.modalBtn, { backgroundColor: "#1976d2", marginTop: 16 }]} onPress={onClose}>
-            <Text style={styles.modalBtnText}>Close</Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.modalBtn]}
+            onPress={onClose}
+          >
+            <Text style={styles.modalBtnText}>✖ Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -227,10 +297,16 @@ const TrackOrderModal = ({ visible, status, onClose }) => {
 
 // -------- Settings Sheet (Logout lives here) --------
 const SettingsRow = ({ icon, label, danger, onPress, right }) => (
-  <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.85}>
+  <TouchableOpacity
+    style={styles.settingRow}
+    onPress={onPress}
+    activeOpacity={0.85}
+  >
     <View style={styles.settingRowLeft}>
       <Ionicons name={icon} size={20} color={danger ? "#d32f2f" : "#222"} />
-      <Text style={[styles.settingLabel, danger && { color: "#d32f2f" }]}>{label}</Text>
+      <Text style={[styles.settingLabel, danger && { color: "#d32f2f" }]}>
+        {label}
+      </Text>
     </View>
     {right ?? <Ionicons name="chevron-forward" size={18} color="#777" />}
   </TouchableOpacity>
@@ -238,7 +314,11 @@ const SettingsRow = ({ icon, label, danger, onPress, right }) => (
 
 // 🆕 SupportSheet rows
 const SupportRow = ({ icon, title, subtitle, onPress, right }) => (
-  <TouchableOpacity style={styles.supportRow} onPress={onPress} activeOpacity={0.9}>
+  <TouchableOpacity
+    style={styles.supportRow}
+    onPress={onPress}
+    activeOpacity={0.9}
+  >
     <View style={styles.supportRowLeft}>
       <Ionicons name={icon} size={20} color="#222" />
       <View>
@@ -252,9 +332,18 @@ const SupportRow = ({ icon, title, subtitle, onPress, right }) => (
 
 // 🆕 Support bottom sheet
 const SupportSheet = ({ visible, onClose }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+  <Modal
+    visible={visible}
+    transparent
+    animationType="fade"
+    onRequestClose={onClose}
+  >
     <View style={styles.sheetOverlay}>
-      <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity
+        style={styles.sheetBackdrop}
+        activeOpacity={1}
+        onPress={onClose}
+      />
       <View style={styles.sheetBody}>
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>Support</Text>
@@ -290,10 +379,26 @@ const SupportSheet = ({ visible, onClose }) => (
 );
 
 // 🔧 SettingsSheet gets onOpenSupport to open SupportSheet
-const SettingsSheet = ({ visible, onClose, onLogout, onDelete, navigateTo, onOpenSupport }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+const SettingsSheet = ({
+  visible,
+  onClose,
+  onLogout,
+  onDelete,
+  navigateTo,
+  onOpenSupport,
+}) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="fade"
+    onRequestClose={onClose}
+  >
     <View style={styles.sheetOverlay}>
-      <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity
+        style={styles.sheetBackdrop}
+        activeOpacity={1}
+        onPress={onClose}
+      />
       <View style={styles.sheetBody}>
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>Settings</Text>
@@ -303,32 +408,73 @@ const SettingsSheet = ({ visible, onClose, onLogout, onDelete, navigateTo, onOpe
         </View>
 
         <View style={styles.sheetList}>
-          <SettingsRow icon="person-outline" label="Edit Profile" onPress={() => { onClose(); Toast.show({type:"info", text1:"Edit profile coming soon"}); }} />
-          <SettingsRow icon="map-outline" label="Addresses" onPress={() => { onClose(); Toast.show({type:"info", text1:"Addresses coming soon"}); }} />
-          <SettingsRow icon="notifications-outline" label="Notifications" onPress={() => { onClose(); Toast.show({type:"info", text1:"Notifications coming soon"}); }} />
-          <SettingsRow icon="language-outline" label="Language" onPress={() => { onClose(); Toast.show({type:"info", text1:"Language setting coming soon"}); }} />
+          <SettingsRow
+            icon="person-outline"
+            label="Edit Profile"
+            onPress={() => {
+              onClose();
+              Toast.show({ type: "info", text1: "Edit profile coming soon" });
+            }}
+          />
+          <SettingsRow
+            icon="map-outline"
+            label="Addresses"
+            onPress={() => {
+              onClose();
+              Toast.show({ type: "info", text1: "Addresses coming soon" });
+            }}
+          />
+          <SettingsRow
+            icon="notifications-outline"
+            label="Notifications"
+            onPress={() => {
+              onClose();
+              Toast.show({ type: "info", text1: "Notifications coming soon" });
+            }}
+          />
+          <SettingsRow
+            icon="language-outline"
+            label="Language"
+            onPress={() => {
+              onClose();
+              Toast.show({
+                type: "info",
+                text1: "Language setting coming soon",
+              });
+            }}
+          />
           <SettingsRow
             icon="help-circle-outline"
             label="Help & Support"
-            onPress={() => { onClose(); onOpenSupport?.(); }}
+            onPress={() => {
+              onClose();
+              onOpenSupport?.();
+            }}
           />
           <View style={styles.sheetDivider} />
           <SettingsRow
             icon="log-out-outline"
             label="Logout"
             danger
-            onPress={() => { onClose(); onLogout(); }}
-            right={<Ionicons name="log-out-outline" size={18} color="#d32f2f" />}
+            onPress={() => {
+              onClose();
+              onLogout();
+            }}
+            right={
+              <Ionicons name="log-out-outline" size={18} color="#d32f2f" />
+            }
           />
 
           <SettingsRow
-  icon="trash-outline"
-  label="Delete Account"
-  danger
-  onPress={() => { onClose(); onDelete?.(); }}
-  right={<Ionicons name="trash-outline" size={18} color="#d32f2f" />}
-/>
-
+            icon="trash-outline"
+            label="Delete Account"
+            danger
+            onPress={() => {
+              onClose();
+              onDelete?.();
+            }}
+            right={<Ionicons name="trash-outline" size={18} color="#d32f2f" />}
+          />
         </View>
       </View>
     </View>
@@ -346,12 +492,25 @@ const OrderItemRow = ({
   onAddReview,
 }) => {
   const img = item?.image ? item.image.replace("http://", "https://") : null;
+  const navigation = useNavigation();
+  // when click on image (go - productDetails page)
+  const handlePress = () => {
+    const navigateMethod = navigation.navigate;
+    navigateMethod("ProductDetails", {
+      id: item.productId,
+      variantColor: item.color || null,
+      variantSize: item.size || null,
+      image: img,
+    });
+  };
 
   return (
     <View style={styles.itemRow}>
       <View style={{ flexDirection: "row" }}>
         {img ? (
-          <Image source={{ uri: img }} style={styles.itemImg} />
+          <TouchableOpacity onPress={handlePress}>
+            <Image source={{ uri: img }} style={styles.itemImg} />
+          </TouchableOpacity>
         ) : (
           <View style={[styles.itemImg, styles.noImg]}>
             <Text style={{ color: "#999", fontSize: 10 }}>No Image</Text>
@@ -361,8 +520,12 @@ const OrderItemRow = ({
           <Text style={styles.itemName} numberOfLines={2}>
             {item?.productName || "Product"}
           </Text>
-          {item?.color ? <Text style={styles.itemMeta}>Color: {item.color}</Text> : null}
-          {item?.size ? <Text style={styles.itemMeta}>Size: {item.size}</Text> : null}
+          {item?.color ? (
+            <Text style={styles.itemMeta}>Color: {item.color}</Text>
+          ) : null}
+          {item?.size ? (
+            <Text style={styles.itemMeta}>Size: {item.size}</Text>
+          ) : null}
           <Text style={styles.itemMeta}>Qty: {item?.quantity || 1}</Text>
           <Text style={styles.itemMeta}>Price: {item?.price ?? "-"}</Text>
         </View>
@@ -372,13 +535,17 @@ const OrderItemRow = ({
       <View style={styles.itemActionsRow}>
         {showReturnPendingBadge ? (
           <View style={[styles.tag, { backgroundColor: "#EEE" }]}>
-            <Text style={[styles.tagText, { color: "#333" }]}>Return Pending</Text>
+            <Text style={[styles.tagText, { color: "#333" }]}>
+              Return Pending
+            </Text>
           </View>
         ) : null}
 
         {showReviewConfirmedBadge ? (
           <View style={[styles.tag, { backgroundColor: "#E9F7EF" }]}>
-            <Text style={[styles.tagText, { color: "#1B5E20" }]}>Review Confirmed</Text>
+            <Text style={[styles.tagText, { color: "#1B5E20" }]}>
+              Review Confirmed
+            </Text>
           </View>
         ) : null}
 
@@ -393,7 +560,9 @@ const OrderItemRow = ({
             style={[styles.actionGhost, { backgroundColor: "#FFD700" }]}
             onPress={onAddReview}
           >
-            <Text style={[styles.actionGhostText, { color: "#000" }]}>Add Review</Text>
+            <Text style={[styles.actionGhostText, { color: "#000" }]}>
+              Add Review
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -420,7 +589,7 @@ const ProfilePage = () => {
   const [selectedReviewItem, setSelectedReviewItem] = useState(null);
 
   const [settingsOpen, setSettingsOpen] = useState(false); // NEW: settings sheet state
-  const [supportOpen, setSupportOpen] = useState(false);   // 🆕 support sheet state
+  const [supportOpen, setSupportOpen] = useState(false); // 🆕 support sheet state
 
   const [deleteAsk, setDeleteAsk] = useState(false);
 
@@ -428,7 +597,9 @@ const ProfilePage = () => {
   const fetchUserOrders = useCallback(async () => {
     try {
       setLoadingOrders(true);
-      const res = await axios.get(SummaryApi.get_user_orders.url, { withCredentials: true });
+      const res = await axios.get(SummaryApi.get_user_orders.url, {
+        withCredentials: true,
+      });
       if (res.data?.success) {
         const normalized = (res.data.data || []).map((o) => ({
           ...o,
@@ -440,10 +611,16 @@ const ProfilePage = () => {
         }));
         setOrders(normalized);
       } else {
-        Toast.show({ type: "error", text1: res.data?.message || "Failed to load orders" });
+        Toast.show({
+          type: "error",
+          text1: res.data?.message || "Failed to load orders",
+        });
       }
     } catch {
-      Toast.show({ type: "error", text1: "Network error while loading orders" });
+      Toast.show({
+        type: "error",
+        text1: "Network error while loading orders",
+      });
     } finally {
       setLoadingOrders(false);
     }
@@ -456,7 +633,8 @@ const ProfilePage = () => {
   // Filters per tab
   const filteredOrders = useMemo(() => {
     const base = [...orders].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     if (selectedTab === "Pending") {
@@ -464,7 +642,9 @@ const ProfilePage = () => {
     }
 
     if (selectedTab === "Shipping") {
-      return base.filter((o) => [ORDER_STATUS.CONFIRMED, ORDER_STATUS.SHIPPED].includes(o.status));
+      return base.filter((o) =>
+        [ORDER_STATUS.CONFIRMED, ORDER_STATUS.SHIPPED].includes(o.status)
+      );
     }
 
     if (selectedTab === "Delivered") {
@@ -516,10 +696,16 @@ const ProfilePage = () => {
       if (res.data?.success) {
         dispatch(setUserDetails(null));
         setCartCountProduct?.(0);
-        Toast.show({ type: "success", text1: res.data?.message || "Logged out" });
+        Toast.show({
+          type: "success",
+          text1: res.data?.message || "Logged out",
+        });
         navigation.navigate("Home");
       } else {
-        Toast.show({ type: "error", text1: res.data?.message || "Logout failed" });
+        Toast.show({
+          type: "error",
+          text1: res.data?.message || "Logout failed",
+        });
       }
     } catch {
       Toast.show({ type: "error", text1: "Network error" });
@@ -528,43 +714,54 @@ const ProfilePage = () => {
     }
   };
 
-  
-    //handle delete Account
-    const handleDeleteAccount = async () => {
-  try {
-    // ডাবল ট্যাপ ঠেকাতে চাইলে আলাদা deleting state নিতে পারো
-    const res = await axios.delete(SummaryApi.delete_account.url, { withCredentials: true });
+  //handle delete Account
+  const handleDeleteAccount = async () => {
+    try {
+      // ডাবল ট্যাপ ঠেকাতে চাইলে আলাদা deleting state নিতে পারো
+      const res = await axios.delete(SummaryApi.delete_account.url, {
+        withCredentials: true,
+      });
 
-    if (res.data?.success) {
-      // লোকাল স্টেট/স্টোর ক্লিয়ার
-      dispatch(setUserDetails(null));
-      setCartCountProduct?.(0);
-      try { await AsyncStorage.clear(); } catch {}
+      if (res.data?.success) {
+        // লোকাল স্টেট/স্টোর ক্লিয়ার
+        dispatch(setUserDetails(null));
+        setCartCountProduct?.(0);
+        try {
+          await AsyncStorage.clear();
+        } catch {}
 
-      Toast.show({ type: "success", text1: "Account deleted" });
+        Toast.show({ type: "success", text1: "Account deleted" });
 
-      // হোমে নিয়ে যাও (history reset)
-      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
-    } else {
-      Toast.show({ type: "error", text1: res.data?.message || "Delete failed" });
+        // হোমে নিয়ে যাও (history reset)
+        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: res.data?.message || "Delete failed",
+        });
+      }
+    } catch (e) {
+    } finally {
+      setDeleteAsk(false);
     }
-  } catch (e) {
-  } finally {
-    setDeleteAsk(false);
-  }
-};
-
+  };
 
   const handleCancelOrder = async (orderId) => {
     try {
-      const res = await axios.delete(`${SummaryApi.cancel_user_order.url}/${orderId}`, {
-        withCredentials: true,
-      });
+      const res = await axios.delete(
+        `${SummaryApi.cancel_user_order.url}/${orderId}`,
+        {
+          withCredentials: true,
+        }
+      );
       if (res.data?.success) {
         setOrders((prev) => prev.filter((o) => o._id !== orderId));
         Toast.show({ type: "success", text1: "Order cancelled" });
       } else {
-        Toast.show({ type: "error", text1: res.data?.message || "Cancel failed" });
+        Toast.show({
+          type: "error",
+          text1: res.data?.message || "Cancel failed",
+        });
       }
     } catch {
       Toast.show({ type: "error", text1: "Network error" });
@@ -573,12 +770,23 @@ const ProfilePage = () => {
 
   const handleReturnOrder = async (orderId) => {
     try {
-      const res = await axios.put(`${SummaryApi.return_user_order.url}/${orderId}`, {}, { withCredentials: true });
+      const res = await axios.put(
+        `${SummaryApi.return_user_order.url}/${orderId}`,
+        {},
+        { withCredentials: true }
+      );
       if (res.data?.success) {
-        setOrders((prev) => prev.map((o) => (o._id === orderId ? { ...o, status: ORDER_STATUS.RETURN } : o)));
+        setOrders((prev) =>
+          prev.map((o) =>
+            o._id === orderId ? { ...o, status: ORDER_STATUS.RETURN } : o
+          )
+        );
         Toast.show({ type: "success", text1: "Return requested" });
       } else {
-        Toast.show({ type: "error", text1: res.data?.message || "Return failed" });
+        Toast.show({
+          type: "error",
+          text1: res.data?.message || "Return failed",
+        });
       }
     } catch {
       Toast.show({ type: "error", text1: "Network error" });
@@ -592,14 +800,16 @@ const ProfilePage = () => {
         {},
         { withCredentials: true }
       );
-    if (res.data?.success) {
+      if (res.data?.success) {
         setOrders((prev) =>
           prev.map((o) =>
             o._id === orderId
               ? {
                   ...o,
                   items: o.items.map((it) =>
-                    it._id === itemId ? { ...it, itemStatus: ITEM_STATUS.RETURN_PENDING } : it
+                    it._id === itemId
+                      ? { ...it, itemStatus: ITEM_STATUS.RETURN_PENDING }
+                      : it
                   ),
                 }
               : o
@@ -607,7 +817,10 @@ const ProfilePage = () => {
         );
         Toast.show({ type: "success", text1: "Item marked for return" });
       } else {
-        Toast.show({ type: "error", text1: res.data?.message || "Return failed" });
+        Toast.show({
+          type: "error",
+          text1: res.data?.message || "Return failed",
+        });
       }
     } catch {
       Toast.show({ type: "error", text1: "Network error" });
@@ -627,12 +840,17 @@ const ProfilePage = () => {
   // Stats (unchanged)
   const stats = useMemo(() => {
     const all = orders.length;
-    const delivered = orders.filter((o) => o.status === ORDER_STATUS.DELIVERED).length;
-    const returnConfirmed =
-      orders.reduce(
-        (acc, o) => acc + (o.items || []).filter((it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED).length,
-        0
-      );
+    const delivered = orders.filter(
+      (o) => o.status === ORDER_STATUS.DELIVERED
+    ).length;
+    const returnConfirmed = orders.reduce(
+      (acc, o) =>
+        acc +
+        (o.items || []).filter(
+          (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED
+        ).length,
+      0
+    );
     return { all, delivered, returnConfirmed };
   }, [orders]);
 
@@ -668,14 +886,19 @@ const ProfilePage = () => {
           <Text style={styles.orderMetaText}>
             Ship to:{" "}
             <Text style={styles.orderMetaValue}>
-              {(ship.address || "-") + (ship.district ? `, ${ship.district}` : "")}
+              {(ship.address || "-") +
+                (ship.district ? `, ${ship.district}` : "")}
             </Text>
           </Text>
           <Text style={styles.orderMetaText}>
-            Phone: <Text style={styles.orderMetaValue}>{ship.phone || "-"}</Text>
+            Phone:{" "}
+            <Text style={styles.orderMetaValue}>{ship.phone || "-"}</Text>
           </Text>
           <Text style={styles.orderMetaText}>
-            Total: <Text style={styles.orderMetaValue}>৳{order?.totalAmount ?? "-"}</Text>
+            Total:{" "}
+            <Text style={styles.orderMetaValue}>
+              ৳{order?.totalAmount ?? "-"}
+            </Text>
           </Text>
           <Text style={styles.orderMetaText}>
             Placed:{" "}
@@ -780,7 +1003,9 @@ const ProfilePage = () => {
                       onPress={() => handleReturnOrder(order._id)}
                     >
                       <Text style={styles.actionBtnText}>
-                        {(order.items || []).length > 1 ? "Return All" : "Return"}
+                        {(order.items || []).length > 1
+                          ? "Return All"
+                          : "Return"}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -798,7 +1023,7 @@ const ProfilePage = () => {
   const userInitial = user?.name?.charAt(0)?.toUpperCase() || "?";
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       {/* Header (Settings opens sheet) */}
       <Header
         cartCount={cartCountProduct}
@@ -815,16 +1040,29 @@ const ProfilePage = () => {
                 <Text style={styles.avatarText}>{userInitial}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.name} numberOfLines={1}>{user?.name || "User"}</Text>
-                <Text style={styles.email} numberOfLines={1}>{user?.email || "-"}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {user?.name || "User"}
+                </Text>
+                <Text style={styles.email} numberOfLines={1}>
+                  {user?.email || "-"}
+                </Text>
                 <View style={styles.memberBadge}>
-                  <Ionicons name="shield-checkmark-outline" size={14} color="#1976d2" />
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={14}
+                    color="#1976d2"
+                  />
                   <Text style={styles.memberBadgeText}>Member</Text>
                 </View>
               </View>
               <TouchableOpacity
                 style={styles.editBtn}
-                onPress={() => Toast.show({ type: "info", text1: "Edit profile coming soon" })}
+                onPress={() =>
+                  Toast.show({
+                    type: "info",
+                    text1: "Edit profile coming soon",
+                  })
+                }
               >
                 <Ionicons name="create-outline" size={16} color="#1976d2" />
                 <Text style={styles.editBtnText}>Edit</Text>
@@ -833,45 +1071,117 @@ const ProfilePage = () => {
 
             {/* Stats */}
             <View style={styles.statsRow}>
-              <StatPill icon="clipboard-text-outline" label="Orders" value={stats.all} onPress={() => setSelectedTab("All")} />
-              <StatPill icon="truck-delivery-outline" label="Delivered" value={stats.delivered} onPress={() => setSelectedTab("Delivered")} />
-              <StatPill icon="autorenew" label="Return" value={stats.returnConfirmed} onPress={() => setSelectedTab("Return")} />
+              <StatPill
+                icon="clipboard-text-outline"
+                label="Orders"
+                value={stats.all}
+                onPress={() => setSelectedTab("All")}
+              />
+              <StatPill
+                icon="truck-delivery-outline"
+                label="Delivered"
+                value={stats.delivered}
+                onPress={() => setSelectedTab("Delivered")}
+              />
+              <StatPill
+                icon="autorenew"
+                label="Return"
+                value={stats.returnConfirmed}
+                onPress={() => setSelectedTab("Return")}
+              />
             </View>
 
             {/* Quick Actions */}
             <View style={styles.quickGrid}>
-              <QuickAction icon="package-variant-closed" label="My Orders" onPress={() => setSelectedTab("All")} />
-              <QuickAction icon="map-marker-outline" label="Addresses" onPress={() => Toast.show({ type: "info", text1: "Addresses coming soon" })} />
+              <QuickAction
+                icon="package-variant-closed"
+                label="My Orders"
+                onPress={() => setSelectedTab("All")}
+              />
+              <QuickAction
+                icon="map-marker-outline"
+                label="Addresses"
+                onPress={() =>
+                  Toast.show({ type: "info", text1: "Addresses coming soon" })
+                }
+              />
               {/* 🆕 Support opens bottom sheet */}
-              <QuickAction icon="headset" label="Support" onPress={() => setSupportOpen(true)} />
-              <QuickAction icon="bell-outline" label="Notifications" onPress={() => Toast.show({ type: "info", text1: "Notifications coming soon" })} />
-              <QuickAction icon="wallet-outline" label="Payments" onPress={() => Toast.show({ type: "info", text1: "Payment methods coming soon" })} />
-              <QuickAction icon="help-circle-outline" label="Help" onPress={() => Toast.show({ type: "info", text1: "Help center coming soon" })} />
+              <QuickAction
+                icon="headset"
+                label="Support"
+                onPress={() => setSupportOpen(true)}
+              />
+              <QuickAction
+                icon="bell-outline"
+                label="Notifications"
+                onPress={() =>
+                  Toast.show({
+                    type: "info",
+                    text1: "Notifications coming soon",
+                  })
+                }
+              />
+              <QuickAction
+                icon="wallet-outline"
+                label="Payments"
+                onPress={() =>
+                  Toast.show({
+                    type: "info",
+                    text1: "Payment methods coming soon",
+                  })
+                }
+              />
+              <QuickAction
+                icon="help-circle-outline"
+                label="Help"
+                onPress={() =>
+                  Toast.show({ type: "info", text1: "Help center coming soon" })
+                }
+              />
             </View>
 
             {/* Tabs */}
             <View style={styles.tabsRow}>
-              {["All", "Pending", "Shipping", "Delivered", "Return", "Review"].map((t) => (
-                <Chip key={t} label={t} active={selectedTab === t} onPress={() => setSelectedTab(t)} />
+              {[
+                "All",
+                "Pending",
+                "Shipping",
+                "Delivered",
+                "Return",
+                "Review",
+              ].map((t) => (
+                <Chip
+                  key={t}
+                  label={t}
+                  active={selectedTab === t}
+                  onPress={() => setSelectedTab(t)}
+                />
               ))}
             </View>
 
             {/* Section title */}
             <Text style={styles.sectionTitle}>
-              {selectedTab === "All" ? "Recent Orders" : `${selectedTab} Orders`}
+              {selectedTab === "All"
+                ? "Recent Orders"
+                : `${selectedTab} Orders`}
             </Text>
 
             {/* Loading / Empty */}
             {loadingOrders ? (
               <View style={styles.loadingBox}>
                 <ActivityIndicator size="small" />
-                <Text style={{ marginTop: 6, color: "#666" }}>Loading orders…</Text>
+                <Text style={{ marginTop: 6, color: "#666" }}>
+                  Loading orders…
+                </Text>
               </View>
             ) : filteredOrders.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Ionicons name="cube-outline" size={28} color="#999" />
                 <Text style={styles.emptyText}>No orders found</Text>
-                <TouchableOpacity style={styles.shopBtn} onPress={() => navigation.navigate("Home")}>
+                <TouchableOpacity
+                  style={styles.shopBtn}
+                  onPress={() => navigation.navigate("Home")}
+                >
                   <Text style={styles.shopBtnText}>Go Shopping</Text>
                 </TouchableOpacity>
               </View>
@@ -890,9 +1200,8 @@ const ProfilePage = () => {
         onClose={() => setSettingsOpen(false)}
         onLogout={() => setLogoutAsk(true)}
         navigateTo={(route) => navigation.navigate(route)}
-        onOpenSupport={() => setSupportOpen(true)} 
+        onOpenSupport={() => setSupportOpen(true)}
         onDelete={() => setDeleteAsk(true)}
-
       />
 
       {/* 🆕 Support Sheet */}
@@ -910,14 +1219,13 @@ const ProfilePage = () => {
       />
 
       <ConfirmModal
-  visible={deleteAsk}
-  title={"Are you sure delete your accoutn?"}
-  cancelText="No"
-  okText="Yes, delete"
-  onCancel={() => setDeleteAsk(false)}
-  onOk={handleDeleteAccount}
-/>
-
+        visible={deleteAsk}
+        title={"Are you sure delete your accoutn?"}
+        cancelText="No"
+        okText="Yes, delete"
+        onCancel={() => setDeleteAsk(false)}
+        onOk={handleDeleteAccount}
+      />
 
       {/* Track Modal */}
       <TrackOrderModal
@@ -953,7 +1261,10 @@ const ProfilePage = () => {
               if (res.data?.success) {
                 Toast.show({ type: "success", text1: "Review submitted!" });
               } else {
-                Toast.show({ type: "error", text1: res.data?.message || "Failed to submit review" });
+                Toast.show({
+                  type: "error",
+                  text1: res.data?.message || "Failed to submit review",
+                });
               }
             } catch {
               Toast.show({ type: "error", text1: "Network error" });
@@ -964,7 +1275,7 @@ const ProfilePage = () => {
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -992,7 +1303,7 @@ function getStatusChipStyle(status) {
 
 // ---------- Styles ----------
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f8f9fb",marginBottom:60 },
+  safe: { flex: 1, backgroundColor: "#f8f9fb", marginBottom: 60 },
 
   header: {
     paddingHorizontal: 16,
@@ -1003,7 +1314,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
-    paddingTop:50
+    paddingTop: 50,
   },
   headerTitle: { fontSize: 20, fontWeight: "700", color: "#222" },
   badge: {
@@ -1034,28 +1345,52 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,0,0,0.05)",
   },
   avatar: {
-    width: 60, height: 60, borderRadius: 30, backgroundColor: "#1976d2",
-    alignItems: "center", justifyContent: "center", marginRight: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#1976d2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   avatarText: { color: "#fff", fontSize: 28, fontWeight: "800" },
   name: { fontSize: 18, fontWeight: "700", color: "#222" },
   email: { fontSize: 13, color: "#666", marginTop: 2 },
   memberBadge: {
-    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6,
-    alignSelf: "flex-start", backgroundColor: "#EAF3FF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#EAF3FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   memberBadgeText: { color: "#1976d2", fontSize: 12, fontWeight: "600" },
   editBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: "#EAF3FF",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#EAF3FF",
   },
   editBtnText: { color: "#1976d2", fontWeight: "700", fontSize: 12 },
 
   // Stats
   statsRow: { flexDirection: "row", gap: 10, marginTop: 10 },
   statCard: {
-    flex: 1, backgroundColor: "#fff", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14,
-    alignItems: "flex-start", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", gap: 4,
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    gap: 4,
   },
   statValue: { fontSize: 18, fontWeight: "800", color: "#222" },
   statLabel: { fontSize: 12, color: "#666" },
@@ -1063,38 +1398,86 @@ const styles = StyleSheet.create({
   // Quick actions
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 },
   quickAction: {
-    width: "31.8%", backgroundColor: "#fff", borderRadius: 12, paddingVertical: 14, alignItems: "center",
-    borderWidth: 1, borderColor: "rgba(0,0,0,0.06)",
+    width: "31.8%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
-  quickActionLabel: { marginTop: 6, fontSize: 12, color: "#333", fontWeight: "600" },
+  quickActionLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#333",
+    fontWeight: "600",
+  },
 
   // Tabs
   tabsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: "#EDEDED" },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#EDEDED",
+  },
   chipActive: { backgroundColor: "#1976d2" },
   chipText: { fontSize: 12, color: "#333", fontWeight: "600" },
   chipTextActive: { color: "#fff" },
 
-  sectionTitle: { marginTop: 14, marginBottom: 8, fontSize: 16, fontWeight: "800", color: "#222" },
+  sectionTitle: {
+    marginTop: 14,
+    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#222",
+  },
 
   // Loading / Empty
   loadingBox: {
-    backgroundColor: "#fff", borderRadius: 12, paddingVertical: 20, alignItems: "center",
-    borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", marginBottom: 8,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    marginBottom: 8,
   },
   emptyBox: {
-    backgroundColor: "#fff", borderRadius: 12, paddingVertical: 24, alignItems: "center",
-    borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", marginBottom: 8, gap: 6,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    marginBottom: 8,
+    gap: 6,
   },
   emptyText: { color: "#666", marginTop: 6 },
-  shopBtn: { marginTop: 8, backgroundColor: "#1976d2", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  shopBtn: {
+    marginTop: 8,
+    backgroundColor: "#1976d2",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
   shopBtnText: { color: "#fff", fontWeight: "700" },
 
   // Order card
   orderCard: {
-    backgroundColor: "#fff", borderRadius: 12, padding: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", marginBottom: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    marginBottom: 12,
   },
-  orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  orderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
   orderTitle: { fontSize: 15, fontWeight: "800", color: "#222" },
   statusChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
   statusChipText: { fontSize: 12, fontWeight: "700", color: "#222" },
@@ -1104,43 +1487,90 @@ const styles = StyleSheet.create({
 
   // Item
   itemRow: {
-    borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", borderRadius: 10, padding: 8, marginTop: 8, backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    borderRadius: 10,
+    padding: 8,
+    marginTop: 8,
+    backgroundColor: "#fff",
   },
   itemImg: { width: 60, height: 60, borderRadius: 6 },
-  noImg: { backgroundColor: "#eee", alignItems: "center", justifyContent: "center" },
+  noImg: {
+    backgroundColor: "#eee",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   itemName: { fontWeight: "700", color: "#222" },
   itemMeta: { color: "#666", fontSize: 12, marginTop: 1 },
 
   // Item actions (below)
-  itemActionsRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 10 },
+  itemActionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
   tag: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
   tagText: { fontWeight: "700", fontSize: 12 },
 
   orderActionsRow: { flexDirection: "row", gap: 8, marginTop: 10 },
-  actionBtn: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 8 },
+  actionBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
   actionBtnText: { color: "#fff", fontWeight: "800" },
 
-  actionGhost: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#EDEDED" },
+  actionGhost: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#EDEDED",
+  },
   actionGhostText: { color: "#000", fontWeight: "700", fontSize: 12 },
 
   // Modals
   modalOverlay: {
-    flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", paddingHorizontal: 18,
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
   },
-  modalContent: { backgroundColor: "#fff", borderRadius: 12, padding: 18, width: "100%" },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 18,
+    width: "100%",
+  },
   modalTitle: { fontSize: 18, fontWeight: "800", color: "#222" },
 
-  statusRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", marginTop: 10 },
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginTop: 10,
+  },
   stepItem: { alignItems: "center", flex: 1 },
   stepCircle: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: "#ccc",
-    alignItems: "center", justifyContent: "center", marginBottom: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#ccc",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
   stepLabel: { fontSize: 12, color: "#888" },
 
   // Settings sheet styles
   sheetOverlay: { flex: 1, justifyContent: "flex-end" },
-  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
   sheetBody: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 16,
@@ -1167,7 +1597,11 @@ const styles = StyleSheet.create({
   },
   settingRowLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   settingLabel: { fontSize: 14, color: "#222", fontWeight: "600" },
-  sheetDivider: { height: 1, backgroundColor: "rgba(0,0,0,0.08)", marginVertical: 8 },
+  sheetDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.08)",
+    marginVertical: 8,
+  },
 
   // 🆕 Support sheet styles
   supportCard: {
@@ -1188,4 +1622,26 @@ const styles = StyleSheet.create({
   supportTitle: { fontSize: 14, fontWeight: "700", color: "#222" },
   supportSub: { fontSize: 12, color: "#666", marginTop: 2 },
   supportNote: { marginTop: 10, fontSize: 12, color: "#666" },
+  // modal button
+  modalBtn: {
+    backgroundColor: "#1976d2", // নীল শেড
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+    elevation: 4, // Android shadow
+    shadowColor: "#000", // iOS shadow
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  modalBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
 });

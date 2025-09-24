@@ -1,4 +1,3 @@
-import { useNavigation } from "@react-navigation/native";
 import { useContext, useEffect, useState } from "react";
 import {
   Dimensions,
@@ -14,13 +13,12 @@ import SearchBar from "../components/SearchBar";
 import Context from "../context";
 import { trackBasic } from "../helper/trackBasic";
 
-// import { trackBasic } from "./src/helper/trackBasic";
+// ✅ NEW: global navigation helper (no useNavigation hook)
+import { navigate } from "../common/navigationRef";
 
 const screenWidth = Dimensions.get("window").width;
 
 const CategoryPage = () => {
-  const navigation = useNavigation();
-  const { setCartCountProduct } = useContext(Context);
   const [allProducts, setAllProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const getProductFromStore = useSelector(
@@ -29,11 +27,9 @@ const CategoryPage = () => {
 
   const categoryList = useSelector((state) => state.categoryState.categoryList);
 
-  // console.log("categoryList_____>", categoryList);
-
   useEffect(() => {
     setAllProducts(getProductFromStore);
-  }, [getProductFromStore]); // 🔁 Effect will rerun if products from Redux store change
+  }, [getProductFromStore]);
 
   // 🔵 Filtering logic (same as web)
   let filteredCategories = [];
@@ -58,30 +54,25 @@ const CategoryPage = () => {
       allProducts.find((p) => p.subCategory === subCat)
     );
   }
-  // console.log(
-  //   "🦌filteredCategories🦌",
-  //   filteredCategories[0]?.img.replace("http://", "https://")
-  // );
 
- // inside component
-const handleSubCategory = (subcatName) => {
-  // accept string; normalize only for tracking
-  const name = String(subcatName || '').trim();
-  if (!name) return;
+  // inside component
+  const handleSubCategory = (subcatName) => {
+    const name = String(subcatName || "").trim();
+    if (!name) return;
 
-  // fire-and-forget tracking (don't block navigation)
-  trackBasic('category_click', { subCategory: name.toLowerCase() }).catch(() => {});
+    // fire-and-forget tracking (don't block navigation)
+    try {
+      trackBasic("category_click", { subCategory: name.toLowerCase() });
+    } catch {}
 
-  // navigate with original name (keeps UI labels intact)
-  navigation.navigate("SubCategoryWise", { subCategory: name });
-};
+    // ✅ use global navigate (no hook)
+    navigate("SubCategoryWise", { subCategory: name });
+  };
 
   return (
     <View style={styles.mainContainer}>
       <SearchBar />
-      {/* <View style={styles.headerTitle}> */}
       <Text style={styles.title}>Chose Category</Text>
-      {/* </View> */}
       <View style={styles.container}>
         {/* 🔵 Sidebar like category */}
         <ScrollView
@@ -130,7 +121,6 @@ const handleSubCategory = (subcatName) => {
             >
               {subcat?.img ? (
                 <Image
-                  // source={{ uri: subcat.variants[0].images?.[0] }}
                   source={{ uri: subcat?.img.replace("http://", "https://") }}
                   style={styles.image}
                 />
@@ -152,9 +142,6 @@ const handleSubCategory = (subcatName) => {
 
 const styles = StyleSheet.create({
   mainContainer: {
-    // padding: 10,
-    // flex: 1,
-    // marginTop: 10,
     flex: 1,
     paddingTop: 95 - 15,
     backgroundColor: "#fff",
@@ -164,7 +151,6 @@ const styles = StyleSheet.create({
     marginBottom: 75 + 40,
   },
   headerTitle: {
-    // height: 90,
     justifyContent: "center",
     alignItems: "center",
     borderBottomWidth: 1,
@@ -185,12 +171,10 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     paddingBottom: 10,
     paddingTop: 0,
-    // marginTop:0,
     position: "fixed",
   },
   sidebar: {
     width: 160,
-    // paddingRight: 10,
     borderRightWidth: 1,
     borderRightColor: "#ddd",
   },
@@ -211,7 +195,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   card: {
-    width: (screenWidth - 160) / 2, // approx 2 cols minus sidebar width
+    width: (screenWidth - 160) / 2,
     backgroundColor: "#f8f8f8",
     borderRadius: 8,
     padding: 12,

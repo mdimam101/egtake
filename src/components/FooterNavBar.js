@@ -1,5 +1,5 @@
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { useContext } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
@@ -10,10 +10,11 @@ const FooterNavBar = () => {
   const user = useSelector((state) => state?.userState?.user);
   const { cartCountProduct } = useContext(Context);
 
-  const currentRouteName = useNavigationState((state) => {
-    if (!state || !state.routes || state.index == null) return "Home";
-    return state.routes[state.index]?.name || "Home";
-  });
+  // const currentRouteName = useNavigationState((state) => {
+  //   if (!state || !state.routes || state.index == null) return "Home";
+  //   return state.routes[state.index]?.name || "Home";
+  // });
+  const { currentRouteName } = useContext(Context);
 
   // ❗️এখানে ProductDetails ইতিমধ্যে hide করা, তাই নিচের “Only cart icon…” ব্লকটা কখনো চলবে না।
   const hideFooterOnRoutes = ["CheckoutPage", "ProductDetails"];
@@ -96,24 +97,24 @@ const FooterNavBar = () => {
 };
 
 const styles = StyleSheet.create({
-  footerForDetails: {
-    width: 80,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    height: 55,
-    position: "absolute",
-    bottom: 0,
-    left: 20,
-    right: 0,
-    zIndex: 99,
-    backgroundColor: "#fff",
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
-  },
+  // footerForDetails: {
+  //   width: 80,
+  //   flexDirection: "row",
+  //   justifyContent: "space-around",
+  //   alignItems: "center",
+  //   height: 55,
+  //   position: "absolute",
+  //   bottom: 0,
+  //   left: 20,
+  //   right: 0,
+  //   zIndex: 99,
+  //   backgroundColor: "#fff",
+  //   elevation: 8,
+  //   shadowColor: "#000",
+  //   shadowOpacity: 0.08,
+  //   shadowRadius: 8,
+  //   shadowOffset: { width: 0, height: -2 },
+  // },
   footer: {
     position: "absolute",
     left: 0,

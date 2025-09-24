@@ -1,6 +1,6 @@
 import axios from 'axios';
-import SummaryApi from '../common/SummaryApi';
 import { ToastAndroid } from 'react-native';
+import SummaryApi from '../common/SummaryApi';
 
 const removeFromCart = async (cartItemId) => {
   try {
@@ -20,9 +20,7 @@ const removeFromCart = async (cartItemId) => {
     }
 
     return result;
-  } catch (err) {
-    // console.error('Remove from cart error:', err);
-    // ToastAndroid.show("Error removing item", ToastAndroid.SHORT);
+  } catch {
     return { success: false };
   }
 };

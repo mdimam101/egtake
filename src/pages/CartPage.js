@@ -14,11 +14,37 @@ import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
 import CartItem from "../components/CartItem";
 import UserProductCart from "../components/UserProductCart";
+import { GUEST_CART_KEY } from "../helper/guestCart";
+
+// identity: productId + image + size + color (server/guest উভয় শেপেই কাজ করবে)
+const getIdentity = (item) => {
+  const pid =
+    typeof item.productId === "object" ? item.productId?._id : item.productId;
+  const image = (item.image || "").replace("https://", "http://");
+  const size = (item.size || "").trim();
+  const color = (item.color || "").trim();
+  return `${pid}__${image}__${size}__${color}`;
+};
+
+// cache-first merge: cache আগে দেখাবে, তারপর server থেকে শুধু নতুন/updated গুলো যোগ করবে
+const mergeCartArrays = (cacheArr = [], serverArr = []) => {
+  const map = new Map();
+
+  // 1) put cache first (to show instantly)
+  for (const it of cacheArr) {
+    map.set(getIdentity(it), it);
+  }
+
+  // 2) server wins for same identity (overwrite), or push new ones
+  for (const it of serverArr) {
+    map.set(getIdentity(it), it);
+  }
+
+  return Array.from(map.values());
+};
 
 const CartPage = () => {
   const navigation = useNavigation();
-  // const { fetchUserAddToCart } = useContext(Context);
-
   const [cartItems, setCartItems] = useState([]);
   const [unselectedItems, setUnselectedItems] = useState([]);
   const [latestProducts, setLatestProducts] = useState([]);
@@ -27,17 +53,31 @@ const CartPage = () => {
 
   const fetchCartItems = async () => {
     try {
+      // 1) read cache first (guest বা logged-in—দুই ক্ষেত্রেই আগে UI তে দেখাও)
+      const raw = await AsyncStorage.getItem(GUEST_CART_KEY);
+      const cacheArr = raw ? JSON.parse(raw) : [];
+      if (cacheArr.length > 0) {
+        setCartItems(cacheArr); // 👈 cache দেখালাম
+      }
+
+      // 2) guest হলে এখানেই শেষ
+      if (!user?._id) return;
+
+      // 3) logged-in হলে fresh server data আনো
       const response = await axios({
         method: SummaryApi.getCartProduct.method,
         url: SummaryApi.getCartProduct.url,
         withCredentials: true,
       });
-      if (response.data.success) {
-        setCartItems(response.data.data);
+
+      if (response.data?.success) {
+        const serverArr = response.data.data || [];
+
+        // ✅ push-merge: cache + server (duplicate identity হলে server version রাখবো)
+        const merged = mergeCartArrays(cacheArr, serverArr);
+        setCartItems(merged);
       }
-    } catch (err) {
-      // console.error("Failed to fetch cart items:", err);
-    }
+    } catch {}
   };
 
   // check latest product for quantity check
@@ -47,16 +87,11 @@ const CartPage = () => {
       if (response.data.success) {
         setLatestProducts(response.data.data);
       }
-    } catch (err) {
-      // console.error("Failed to fetch latest products:", err);
-    }
+    } catch {}
   };
 
   useEffect(() => {
-    if (user?._id) {
-      fetchCartItems();
-    }
-
+    fetchCartItems();
     fetchLatestProducts();
   }, []);
 
@@ -229,7 +264,7 @@ const CartPage = () => {
         ) : (
           cartItems.map((item) => (
             <CartItem
-              key={item._id}
+              key={`${item?._id}_${item?.addedAt}`} //✅ unique key
               product={item}
               refreshCart={fetchCartItems}
               latestProducts={latestProducts}
@@ -306,7 +341,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 5,
-    paddingBottom:30,
+    paddingBottom: 30,
     backgroundColor: "#F2F2F2",
     marginBottom: 30,
   },

@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StatusBar, StyleSheet, View } from "react-native";
 import { Provider, useDispatch, useSelector } from "react-redux";
 
 // Redux
@@ -37,8 +37,12 @@ import FooterNavBar from "./src/components/FooterNavBar";
 import SummaryApi from "./src/common/SummaryApi";
 import ReviewsScreen from "./src/screens/ReviewsScreen";
 
-import { StatusBar } from "expo-status-bar"; // ✅ add this import
 import { trackBasic } from "./src/helper/trackBasic";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SystemUI from "expo-system-ui";
+import { navigationRef } from "./src/common/navigationRef"; // না থাকলে createNavigationContainerRef দিয়ে বানাও
+import { GUEST_CART_KEY } from "./src/helper/guestCart";
 
 const Stack = createNativeStackNavigator();
 
@@ -47,16 +51,9 @@ const AppWrapper = () => {
   const [cartCountProduct, setCartCountProduct] = useState(0);
   const [cartListData, setCartListData] = useState([]);
   const user = useSelector((state) => state?.userState?.user);
+  const [currentRouteName, setCurrentRouteName] = useState("Home");
 
   const fetchUserDetails = async () => {
-    // EXACT usage (আপনার চাওয়া মতো):
-
-    // trackBasic('category_click', { subCategory: 'gggggg' });
-    // trackBasic('search', { term: 'max' });
-    // trackBasic('product_view', { subCategory: 'rrrrr' });
-    // trackBasic('add_to_cart', { count: 3 });
-
-    // trackBasic('order_confirm', { count: 5 }); // aita pore korbo
     try {
       const response = await axios({
         method: SummaryApi.current_user.method,
@@ -72,17 +69,37 @@ const AppWrapper = () => {
   };
 
   const fetchUserAddToCart = async (isLogin = false) => {
-    if (!isLogin) return setCartCountProduct(0);
+    const raw = await AsyncStorage.getItem(GUEST_CART_KEY);
+    const cacheArr = raw ? JSON.parse(raw) : [];
+
+    let localStoreDataCount = 0;
+    let serverSaveDataCount = 0;
+
+    if (cacheArr?.length >= 1) {
+      localStoreDataCount = cacheArr?.length;
+    }
+
     try {
-      const response = await axios({
-        method: SummaryApi.count_AddToCart_Product.method,
-        url: SummaryApi.count_AddToCart_Product.url,
-        withCredentials: true,
-      });
-      const result = response.data;
-      setCartCountProduct(result?.data?.count || 0);
+      if (user?._id) {
+        const response = await axios({
+          method: SummaryApi.count_AddToCart_Product.method,
+          url: SummaryApi.count_AddToCart_Product.url,
+          withCredentials: true,
+        });
+        const result = response.data;
+        if (result?.data?.count) {
+          serverSaveDataCount = Number(result?.data?.count);
+        }
+      }
     } catch (err) {
-      setCartCountProduct(0);
+      //setCartCountProduct(0);
+    } finally {
+      const totalCount = localStoreDataCount + serverSaveDataCount;
+      if (totalCount) {
+        setCartCountProduct(totalCount);
+      } else {
+        setCartCountProduct(0);
+      }
     }
   };
 
@@ -93,7 +110,12 @@ const AppWrapper = () => {
   }, [user?._id]);
 
   trackBasic("visit_app");
-
+  useEffect(() => {
+    StatusBar.setBarStyle("dark-content");
+    if (Platform.OS === "android") {
+      SystemUI.setBackgroundColorAsync("#fff"); // পুরো সিস্টেম UI bg
+    }
+  }, []);
   return (
     <NewsTickerProvider>
       <Context.Provider
@@ -102,13 +124,24 @@ const AppWrapper = () => {
           cartCountProduct,
           fetchUserAddToCart,
           cartListData,
+          currentRouteName,
         }}
       >
         {/* <GestureHandlerRootView style={{ flex: 1 }}> */}
         {/* ✅ Make status bar icons dark on white background */}
-        <StatusBar style="dark" backgroundColor="#fff" />
-        <NavigationContainer>
-          <View style={styles.wrapper}>
+        {/* <StatusBar style="dark" backgroundColor="#F2F2F2" /> */}
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            const r = navigationRef.getCurrentRoute?.();
+            if (r?.name) setCurrentRouteName(r.name);
+          }}
+          onStateChange={() => {
+            const r = navigationRef.getCurrentRoute?.();
+            if (r?.name) setCurrentRouteName(r.name);
+          }}
+        >
+          <View style={[styles.wrapper]}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               {/* <Stack.Navigator> */}
               <Stack.Screen name="Home" component={HomePage} />

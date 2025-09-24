@@ -1,6 +1,5 @@
 import axios from 'axios';
 import SummaryApi from '../common/SummaryApi';
-import { ToastAndroid } from 'react-native';
 
 const increaseQuantity = async (cartItemId) => {
   try {

@@ -173,6 +173,7 @@ const styles = StyleSheet.create({
    backgroundColor: "#F2F2F2",
     // backfaceVisibility: "#fff",
     paddingTop: 90 - 10,
+    // marginBottom:44
   },
   gridContainer: {
     paddingTop: 30,
