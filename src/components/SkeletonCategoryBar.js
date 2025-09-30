@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 const SkeletonCategoryBar = () => {
   return (
-    <View style={styles.skeltonCatWrapper}>
+    <View style={styles.wrapper}>
       <View style={styles.scrollContainer}>
         {[...Array(6)].map((_, index) => (
           <View key={index} style={styles.skeletonItem} />
@@ -16,12 +16,12 @@ const SkeletonCategoryBar = () => {
 const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
-    top: 95-15,
+    top: 95 - 14,
     left: 0,
     right: 0,
     zIndex: 10,
     backgroundColor: "#fff",
-    paddingVertical: 3,
+    paddingVertical: 1,
     borderBottomColor: "#eee",
     borderBottomWidth: 1,
   },

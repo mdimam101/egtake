@@ -1,12 +1,18 @@
 // ✅ Final best-practice version with scroll-to-top and slide-in behavior + shipping info
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   Animated,
   Dimensions,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -26,15 +32,21 @@ import { useSelector } from "react-redux";
 import FullscreenImageModal from "../components/FullscreenImageModal";
 import ImageWithSkeleton from "../components/ImageWithSkeleton";
 import handleWhatsApp from "../helper/handleWhatsApp";
-import { increaseUserInterest } from "../helper/userInterestHelper";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import isEqual from "lodash.isequal";
 import Toast from "react-native-toast-message";
 import { canon, ensureHttps } from "../common/urlUtils";
+import SkeletonCard from "../components/SkeletonCard";
 import { pushGuestCartUnique } from "../helper/guestCart";
+import { increaseUserRecentInterest } from "../helper/sortByUserInterest";
 import { trackBasic } from "../helper/trackBasic";
-import { generateOptimizedVariants } from "../helper/variantUtils";
+
+import { Image as ExpoImage } from "expo-image";
+
+import { CommonActions } from "@react-navigation/native";
+
+const ROLLING_LIMIT = 3;
 
 const Stars = ({ value = 0, size = 14 }) => (
   <View style={{ flexDirection: "row" }}>
@@ -69,9 +81,17 @@ const SIZE_TYPE_NUMBER = [
   "48",
 ];
 
+const getPrimaryImage = (item) =>
+    ensureHttps(item?.img || item?.variants?.[0]?.images?.[0] || "");
+
+// productDetailsPage
 const ProductDetails = ({ route }) => {
-  const { id, variantColor, variantSize, image } = route.params;
-  const { image: passedImage } = route.params; //add
+  const { id } = route.params;
+
+  // use for recomended product list
+  const productDataListfromCache = useSelector(
+    (s) => s.productState.productList
+  );
 
   const { fetchUserAddToCart, cartCountProduct } = useContext(Context);
   const navigation = useNavigation();
@@ -100,6 +120,10 @@ const ProductDetails = ({ route }) => {
   });
   const [loading, setLoading] = useState(true);
   const user = useSelector((state) => state?.userState?.user);
+
+  const [recoPhase, setRecoPhase] = useState([]); // first 6
+  const [recoAll, setRecoAll] = useState([]); // full list (next tick)
+  const recoDisplay = recoAll.length ? recoAll : recoPhase;
 
   const imageSliderRef = useRef();
   const scrollRef = useRef();
@@ -214,15 +238,17 @@ const ProductDetails = ({ route }) => {
       setCurrentIndex(initIndex);
 
       // recommendProduct
-      const raw = await AsyncStorage.getItem("productListCache");
-      if (raw) {
-        const list = JSON.parse(raw);
-        const reco =
-          list.filter((p) => p.category === productData.category) || null;
-        if (reco) {
-          setRecommendedProducts(reco);
-        }
-      }
+      //  const raw = await AsyncStorage.getItem("productListCache");
+      const raw = productDataListfromCache;
+
+      if (!raw || !productData?.category) return [];
+
+      // এক-পাস partition ⇒ API order preserve
+      const same = raw.filter((p) => p.category === productData.category);
+      const others = raw.filter((p) => p.category !== productData.category);
+
+      const prioritoyDisplayCat = same.concat(others);
+      setRecommendedProducts(prioritoyDisplayCat);
     };
 
     const fetchData = async () => {
@@ -265,9 +291,8 @@ const ProductDetails = ({ route }) => {
           // setRecommendedProducts(reco.data.data || []);
           // }
         }
-      } catch {} 
-      
-      finally {
+      } catch {
+      } finally {
         setLoading(false);
       }
     };
@@ -284,13 +309,6 @@ const ProductDetails = ({ route }) => {
       scrollRef.current.scrollTo({ y: 0, animated: true });
     }
   }, [id]);
-
-  //show categoru wise products
-  const optimizedProducts = useMemo(() => {
-    const optimizedProductsResult =
-      generateOptimizedVariants(recommendedProducts);
-    return optimizedProductsResult;
-  }, [recommendedProducts]);
 
   // 1️⃣ After getting `data.variants`, dynamically check:
   const isColorAvailable = data.variants?.some((v) => v.color?.trim());
@@ -369,7 +387,7 @@ const ProductDetails = ({ route }) => {
       await addToCart(payload);
       fetchUserAddToCart(true);
       trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
-      Toast.show({ type: "success", text1: "Added to cart" });
+      //Toast.show({ type: "success", text1: "Added to cart" });
     }
   };
 
@@ -399,10 +417,14 @@ const ProductDetails = ({ route }) => {
   }
 
   useEffect(() => {
-    if (data?.subCategory) {
-      increaseUserInterest(data.subCategory);
-    }
-  }, [data?.subCategory]);
+    if (!data?._id || !data?.category) return;
+
+    const t = setTimeout(() => {
+      increaseUserRecentInterest(data.category, Date.now());
+    }, 2500);
+
+    return () => clearTimeout(t);
+  }, [data?._id]); // 👈 শুধু ID বদলালেই effect চলবে
 
   const selectedVariantDetails = selectedVariant.sizes || [
     { size: "S", stock: 5, length: 32, chest: 38, sleeve: 22 },
@@ -415,22 +437,89 @@ const ProductDetails = ({ route }) => {
   };
 
   // get product review
-  useEffect(() => {
-    async function fetchReviews() {
-      try {
-        const res = await axios.get(SummaryApi.get_product_reviews(data._id));
-        if (res.data.success) {
-          setReviews(res.data.data || []);
-          // console.log("🦌details◆", res.data.data);
-        }
-      } catch (e) {
-        // console.log("🦌detailserror◆", e?.message);
+ useEffect(() => {
+  if (!data?._id) return;
+  const controller = new AbortController();
+  let alive = true;
+
+  (async () => {
+    try {
+      const res = await axios.get(
+        SummaryApi.get_product_reviews(data._id),
+        { signal: controller.signal }               // ✅
+      );
+      if (alive && res.data.success) {
+        setReviews(res.data.data || []);
       }
+    } catch (e) {
+      // ignore
     }
-    if (data?._id) fetchReviews();
-  }, [data?._id]);
+  })();
+
+  return () => { alive = false; controller.abort(); };  // ✅
+}, [data?._id]);
+
 
   const ACTION_BAR_HEIGHT = 105;
+
+  useEffect(() => {
+    if (
+      !Array.isArray(recommendedProducts) ||
+      recommendedProducts.length === 0
+    ) {
+      setRecoPhase([]);
+      setRecoAll([]);
+      return;
+    }
+    const first6 = recommendedProducts.slice(0, 6);
+    setRecoPhase(first6);
+    setRecoAll([]);
+    const id = setTimeout(() => setRecoAll(recommendedProducts), 0); // home-এর মতো "hobohobo"
+    return () => clearTimeout(id);
+  }, [recommendedProducts]);
+
+  const handleRecoPressReplace = useCallback(
+    (item) => {
+      const params = {
+        id: item._id,
+        variantColor: item.variantColor || null,
+        variantSize: item.variantSize || null,
+        image: getPrimaryImage(item),
+      };
+
+      navigation.dispatch((state) => {
+        // non-ProductDetails (sticky) রুটগুলো আলাদা করো
+        // console.log("🦌◆🦌◆state.routes", state.routes.length);
+        
+        const sticky = state.routes.filter((r) => r.name !== "ProductDetails");
+
+        // আগের সব ProductDetails রুট
+        const details = state.routes.filter((r) => r.name === "ProductDetails");
+
+        // কেবল শেষ (limit - 1) টা রাখো, তারপর নতুনটা অ্যাপেন্ড করো
+        const tail = details.slice(-(ROLLING_LIMIT - 1));
+        const routes = [...sticky, ...tail, { name: "ProductDetails", params }];
+
+        return CommonActions.reset({
+          ...state,
+          routes,
+          index: routes.length - 1, // ফোকাস নতুন স্ক্রিনে
+        });
+      });
+
+      return false; // default push ব্লক (যদি তোমার কলার এটায় রিলাই করে)
+    },
+    [navigation, getPrimaryImage]
+  );
+
+  useEffect(() => {
+    // দ্রুত GC ট্রিগার—পুরনো বড় অ্যারে ফাঁকা করুন
+    setAllImages([]);
+    setImageVariantMap([]);
+    setSelectedImg(null);
+    setReviews([]);
+    setCurrentIndex(0);
+  }, [id]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -496,7 +585,7 @@ const ProductDetails = ({ route }) => {
                 activeOpacity={0.9}
                 onPress={() => openViewer(allImages, index, data?.productName)}
               >
-                <Image
+                {/* <Image
                   key={index}
                   source={{
                     uri:
@@ -505,6 +594,19 @@ const ProductDetails = ({ route }) => {
                         : ensureHttps(img),
                   }}
                   style={styles.sliderImage}
+                /> */}
+
+                <ExpoImage
+                  source={{
+                    uri: ensureHttps(
+                      currentIndex === index ? selectedImg || img : img
+                    ),
+                  }}
+                  style={styles.sliderImage}
+                  // contentFit="cover"
+                  cachePolicy="disk"
+                  allowDownscaling
+                  recycleMemory
                 />
               </TouchableOpacity>
             ))}
@@ -586,11 +688,18 @@ const ProductDetails = ({ route }) => {
                   ]}
                 >
                   {thumbImage && (
-                    <Image
-                      source={{
-                        uri: ensureHttps(thumbImage),
-                      }}
+                    // <Image
+                    //   source={{
+                    //     uri: ensureHttps(thumbImage),
+                    //   }}
+                    //   style={styles.thumbnailImage}
+                    // />
+                    <ExpoImage
+                      source={{ uri: ensureHttps(thumbImage) }}
                       style={styles.thumbnailImage}
+                      cachePolicy="disk"
+                      allowDownscaling
+                      recycleMemory
                     />
                   )}
                 </TouchableOpacity>
@@ -672,7 +781,9 @@ const ProductDetails = ({ route }) => {
                 openCommitmentModal(
                   "Free Delivery",
                   `✓নারায়ণগঞ্জে ৪৯৯ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
-                  \n✓Narayanganj Express delivery within 3 hours`
+                  \n✓ঢাকা ৯৯৯+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  \n✓নারায়ণগঞ্জ ও ঢাকার বাইরে ৯৯৯+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  \n✓--Narayanganj Express delivery within 3 hours--`
                 )
               }
             >
@@ -863,7 +974,16 @@ const ProductDetails = ({ route }) => {
                         }
                         style={styles.thumbBox}
                       >
-                        <Image source={{ uri: u }} style={styles.thumbImg} />
+                        {/* <Image source={{ uri: u }} style={styles.thumbImg} /> */}
+
+                        <ExpoImage
+                          source={{ uri: ensureHttps(u) }}
+                          style={styles.thumbImg}
+                          //contentFit="cover"
+                          cachePolicy="disk"
+                          allowDownscaling
+                          recycleMemory
+                        />
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -901,38 +1021,80 @@ const ProductDetails = ({ route }) => {
           ) : null}
         </View>
 
-        <FullscreenImageModal
-          visible={showImageViewer}
-          onClose={() => setShowImageViewer(false)}
-          images={viewerImages}
-          initialIndex={viewerIndex}
-          title={data?.productName || "Photos"}
-        />
+        {showImageViewer && (
+          <FullscreenImageModal
+            visible={showImageViewer}
+            onClose={() => setShowImageViewer(false)}
+            images={viewerImages}
+            initialIndex={viewerIndex}
+            title={data?.productName || "Photos"}
+          />
+        )}
 
         <View style={{ marginTop: 40, marginBottom: -60 }}>
           <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
             Recommended Products
           </Text>
-          <View style={styles.masonryContainer}>
-            <View style={styles.column}>
-              {optimizedProducts
-                .filter((_, idx) => idx % 2 === 0)
-                .map((item, index) => (
-                  <View key={index} style={styles.cardWrapper}>
-                    <UserProductCart productData={item} fromDetails={true} />
-                  </View>
-                ))}
+
+          {/* 🔸 skeleton যখন recoDisplay ফাঁকা */}
+          {!recoDisplay.length ? (
+            <View style={styles.masonryContainer}>
+              <View className="left" style={styles.column}>
+                {[...Array(8)]
+                  .filter((_, idx) => idx % 2 === 0)
+                  .map((_, i) => (
+                    <View key={`reco_skel_L_${i}`} style={styles.cardWrapper}>
+                      <SkeletonCard />
+                    </View>
+                  ))}
+              </View>
+              <View className="right" style={styles.column}>
+                {[...Array(8)]
+                  .filter((_, idx) => idx % 2 !== 0)
+                  .map((_, i) => (
+                    <View key={`reco_skel_R_${i}`} style={styles.cardWrapper}>
+                      <SkeletonCard />
+                    </View>
+                  ))}
+              </View>
             </View>
-            <View style={styles.column}>
-              {optimizedProducts
-                .filter((_, idx) => idx % 2 !== 0)
-                .map((item, index) => (
-                  <View key={index} style={styles.cardWrapper}>
-                    <UserProductCart productData={item} fromDetails={true} />
-                  </View>
-                ))}
+          ) : (
+            // ✅ real data: home-এর মতো left/right split
+            <View style={styles.masonryContainer}>
+              <View style={styles.column}>
+                {recoDisplay
+                  .filter((_, idx) => idx % 2 === 0)
+                  .map((item, index) => (
+                    <View key={`reco_L_${index}`} style={styles.cardWrapper}>
+                      {/* <UserProductCart productData={item} fromDetails={true} /> */}
+
+                      {/* for memory save */}
+
+                      <UserProductCart
+                        productData={item}
+                        fromDetails={true} // থাকুক, pressGuard-ই সব সামলাবে
+                        pressGuard={() => handleRecoPressReplace(item)}
+                      />
+                    </View>
+                  ))}
+              </View>
+              <View style={styles.column}>
+                {recoDisplay
+                  .filter((_, idx) => idx % 2 !== 0)
+                  .map((item, index) => (
+                    <View key={`reco_R_${index}`} style={styles.cardWrapper}>
+                      {/* <UserProductCart productData={item} fromDetails={true} /> */}
+
+                      <UserProductCart
+                        productData={item}
+                        fromDetails={true} // থাকুক, pressGuard-ই সব সামলাবে
+                        pressGuard={() => handleRecoPressReplace(item)}
+                      />
+                    </View>
+                  ))}
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
 

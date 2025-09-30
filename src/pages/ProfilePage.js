@@ -593,6 +593,9 @@ const ProfilePage = () => {
 
   const [deleteAsk, setDeleteAsk] = useState(false);
 
+  // ✅ Ask-before-cancel modal state (null = closed)
+  const [cancelAskId, setCancelAskId] = useState(null);
+
   // Fetch Orders
   const fetchUserOrders = useCallback(async () => {
     try {
@@ -979,7 +982,7 @@ const ProfilePage = () => {
               {isPending ? (
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: "#d32f2f" }]}
-                  onPress={() => handleCancelOrder(order._id)}
+                  onPress={() => setCancelAskId(order._id)} // ✅ আগে modal খুলবে
                 >
                   <Text style={styles.actionBtnText}>Cancel</Text>
                 </TouchableOpacity>
@@ -1225,6 +1228,19 @@ const ProfilePage = () => {
         okText="Yes, delete"
         onCancel={() => setDeleteAsk(false)}
         onOk={handleDeleteAccount}
+      />
+
+      <ConfirmModal
+        visible={!!cancelAskId}
+        title="Are you sure you want to cancel this order?"
+        cancelText="No"
+        okText="Yes, cancel"
+        onCancel={() => setCancelAskId(null)}
+        onOk={() => {
+          const id = cancelAskId;
+          setCancelAskId(null);
+          handleCancelOrder(id); // ✅ আগের ফাংশনই কল হবে
+        }}
       />
 
       {/* Track Modal */}

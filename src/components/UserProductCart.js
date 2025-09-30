@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Animated,
+  ActivityIndicator,
   Dimensions,
   Image,
   StyleSheet,
@@ -9,81 +9,70 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ensureHttps from "../common/ensureHttps";
-import { NewsTickerContext } from "../context/NewsTickerContext"; // ✅ import context
-import * as ImageSizeCache from "../utils/imageSizeCache";
+import ensureHttps from "../common/ensureHttps"; // ← path adjust if needed
+import * as ImageSizeCache from "../utils/imageSizeCache"; // ← path adjust if needed
 
-const UserProductCart = ({ productData, fromDetails = false, disabled = false, pressGuard  }) => {
+const DEFAULT_RATIO = 1.2;
+
+function UserProductCart({
+  productData,
+  fromDetails = false,
+  disabled = false,
+  pressGuard,
+}) {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get("window").width;
   const cardWidth = screenWidth * 0.49;
-  const [imageHeight, setImageHeight] = useState();
 
-  const { visibleIndex, demoNews } = useContext(NewsTickerContext); // ✅ use context
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  // const imageUrl = productData?.img
-  //   ? productData?.img
-  //   : productData?.variants?.[0]?.images?.[0];
-
-  //   console.log("🦌imageUrl◆",imageUrl);
-
-    const rawImageUrl =
-   productData?.img || productData?.variants?.[0]?.images?.[0] || null;
+  const rawImageUrl =
+    productData?.img || productData?.variants?.[0]?.images?.[0] || null;
   const imageUrl = ensureHttps(rawImageUrl);
-    
 
+  // height resolve না হওয়া পর্যন্ত null, resolve হলে পিক্সেল height
+  const [resolvedHeight, setResolvedHeight] = useState(null);
+  const [resolving, setResolving] = useState(true);
+
+  // ratio resolve: cache পেলেই সাথে সাথে, না পেলে wait → তারপর দেখাও
   useEffect(() => {
-  let mounted = true;
-  // if (imageUrl) {
-  //   Image.getSize(
-  //     imageUrl,
-  //     //imageUrl.replace("http://", "https://"),
-  //     (width, height) => {
-  //       if (mounted) {
-  //         const ratio = height / width;
-  //         setImageHeight(cardWidth * ratio);
-  //       }
-  //     },
-  //     () => { setImageHeight(cardWidth * 1.2); } // ✅ graceful fallback
-  //   );
-  // }
+    let alive = true;
+    setResolving(true);
+    setResolvedHeight(null);
 
-   (async () => {
-   if (!imageUrl) return;
-   // 1) Try cached ratio (instant)
-   const cached = await ImageSizeCache.getCachedRatio(imageUrl);
-   if (mounted && typeof cached === "number") {
-     setImageHeight(cardWidth * cached);
-   }
-   // 2) Ensure fresh (fetch if missing/expired)
-   const fresh = await ImageSizeCache.getOrFetchRatio(imageUrl);
-   if (mounted && typeof fresh === "number" && fresh !== cached) {
-     setImageHeight(cardWidth * fresh);
-   }
-   // 3) Final fallback if everything failed
-   if (mounted && !cached && !fresh) {
-     setImageHeight(cardWidth * 1.2);
-   }
- })();
-  return () => {
-    mounted = false; // ⛔ prevent memory warning
-  };
-}, [imageUrl]);
+    (async () => {
+      if (!imageUrl) {
+        if (!alive) return;
+        setResolvedHeight(cardWidth * DEFAULT_RATIO);
+        setResolving(false);
+        return;
+      }
 
-  // ✅ Animate global ticker
-  useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: -visibleIndex * 20,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, [visibleIndex]);
+      const cached = await ImageSizeCache.getCachedRatio(imageUrl);
+      if (!alive) return;
+
+      if (typeof cached === "number") {
+        setResolvedHeight(cardWidth * cached);
+        setResolving(false);
+        return; // ✅ cached থাকলে এখানেই থামো
+      }
+
+      const fresh = await ImageSizeCache.getOrFetchRatio(imageUrl);
+      if (!alive) return;
+
+      setResolvedHeight(
+        cardWidth * (typeof fresh === "number" ? fresh : DEFAULT_RATIO)
+      );
+      setResolving(false);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [imageUrl, cardWidth]);
 
   const handlePress = () => {
-     if (disabled) return;                        // locked
-    if (pressGuard && !pressGuard(productData?._id)) return; // set lock
-        // console.log("🦌productData>>>>>", productData);
+    if (disabled) return;
+    if (pressGuard && !pressGuard(productData?._id)) return;
+
     const navigateMethod = fromDetails ? navigation.push : navigation.navigate;
     navigateMethod("ProductDetails", {
       id: productData._id,
@@ -94,21 +83,38 @@ const UserProductCart = ({ productData, fromDetails = false, disabled = false, p
   };
 
   return (
-     <TouchableOpacity
+    <TouchableOpacity
       style={[styles.card, disabled && { opacity: 0.6 }]}
       onPress={handlePress}
-      disabled={disabled}>
-      <Image
-        //source={{ uri: imageUrl.replace("http://", "https://") }}
-        source={imageUrl ? { uri: imageUrl } : undefined}
-        style={{
-          width: "100%",
-          height: imageHeight || 200,
-          resizeMode: "cover",
-          borderRadius: 8,
-        }}
-        onError={() => setImageHeight(cardWidth * 1.2)} // ✅ fallback
-      />
+      disabled={disabled}
+    >
+      {resolving ? (
+        <View
+          style={{
+            width: "100%",
+            height: cardWidth * DEFAULT_RATIO,
+            borderRadius: 8,
+            overflow: "hidden", // ✅
+            backgroundColor: "#f2f2f2",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <ActivityIndicator size="small" />
+        </View>
+      ) : (
+        <Image
+          source={imageUrl ? { uri: imageUrl } : undefined}
+          style={{
+            width: "100%",
+            height: resolvedHeight ?? cardWidth * DEFAULT_RATIO,
+            resizeMode: "cover",
+            borderRadius: 8,
+          }}
+          onError={() => setResolvedHeight(cardWidth * DEFAULT_RATIO)}
+        />
+      )}
+
       <View style={styles.info}>
         <Text numberOfLines={2} style={styles.name}>
           {productData?.productName}
@@ -119,24 +125,10 @@ const UserProductCart = ({ productData, fromDetails = false, disabled = false, p
         </Text>
       </View>
 
-      {/* 📰 Global news ticker scroll */}
-      <View style={styles.newsBox}>
-        <Animated.View
-          style={[
-            styles.newsContainer,
-            { transform: [{ translateY: animatedValue }] },
-          ]}
-        >
-          {demoNews.map((news, index) => (
-            <View key={index} style={styles.newsSlide}>
-              <Text style={styles.newsText}>{news}</Text>
-            </View>
-          ))}
-        </Animated.View>
-      </View>
+      {/* চাইলে এখানে news ticker / extra UI যোগ করো */}
     </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
@@ -154,8 +146,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 4, // add this for spacing
-    // height: 38,
+    marginBottom: 4,
   },
   price: {
     fontSize: 16,
@@ -166,25 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "normal",
     marginRight: 2,
-  },
-
-  // 📰 News Box Styles
-  newsBox: {
-    height: 20,
-    overflow: "hidden",
-    marginTop: 6,
-    paddingLeft: 5,
-  },
-  newsContainer: {
-    flexDirection: "column",
-  },
-  newsSlide: {
-    height: 20,
-    justifyContent: "flex-start",
-  },
-  newsText: {
-    fontSize: 12,
-    color: "#333",
   },
 });
 

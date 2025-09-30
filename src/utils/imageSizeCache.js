@@ -1,17 +1,16 @@
 // utils/imageSizeCache.js
-import { Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "react-native";
 
 /**
- * Stores aspect ratios keyed by a canonical image URL
- * Value shape: { [key: string]: { r: number, t: number } }
- *  r = aspect ratio (h / w)
- *  t = timestamp (ms)
+ * Persistent, write-once image ratio cache:
+ * Map shape: { [key: string]: { r: number, t: number } }
+ * r = aspect ratio (h / w)
+ * t = last write time (only for pruning; no TTL)
  */
 
-const STORE_KEY = "imgHeights_v3";
-const TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
-const MAX_ENTRIES = 2000;               // soft cap to prevent bloat
+const STORE_KEY = "imgHeights_v4";
+const MAX_ENTRIES = 2000; // soft cap
 
 // --- URL normalizers (protocol/query/hash insensitive) ---
 const ensureHttpsLocal = (u = "") => String(u).replace(/^http:\/\//i, "https://");
@@ -21,32 +20,47 @@ const normalizeKey = (u = "") =>
     .trim()
     .replace(/^https?:\/\//, "")
     .split("?")[0]
-    .split("#")[0]; // strip query/hash
+    .split("#")[0];
 
-let inFlight = new Map(); // key -> Promise
+let mem = null;            // in-memory cache map
+let loadPromise = null;    // singleton loader
+const inFlight = new Map(); // key -> Promise
+let saveTimer = null;
 
-async function loadMap() {
-  try {
-    const raw = (await AsyncStorage.getItem(STORE_KEY)) || "{}";
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") return parsed;
-  } catch {}
-  return {};
+async function ensureLoaded() {
+  if (mem) return;
+  if (!loadPromise) {
+    loadPromise = (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        mem = parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        mem = {};
+      }
+    })();
+  }
+  await loadPromise;
 }
 
-async function saveMap(map) {
-  try {
-    // prune if too big
-    const keys = Object.keys(map);
-    if (keys.length > MAX_ENTRIES) {
-      // drop oldest ~10%
-      keys
-        .sort((a, b) => (map[a].t || 0) - (map[b].t || 0))
-        .slice(0, Math.ceil(keys.length * 0.1))
-        .forEach((k) => delete map[k]);
-    }
-    await AsyncStorage.setItem(STORE_KEY, JSON.stringify(map));
-  } catch {}
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(async () => {
+    try {
+      await AsyncStorage.setItem(STORE_KEY, JSON.stringify(mem));
+    } catch {}
+    saveTimer = null;
+  }, 200); // debounce
+}
+
+function pruneIfNeeded() {
+  const keys = Object.keys(mem);
+  if (keys.length <= MAX_ENTRIES) return;
+  // drop oldest ~10%
+  keys
+    .sort((a, b) => (mem[a].t || 0) - (mem[b].t || 0))
+    .slice(0, Math.ceil(keys.length * 0.1))
+    .forEach((k) => delete mem[k]);
 }
 
 async function fetchRatio(url) {
@@ -60,42 +74,42 @@ async function fetchRatio(url) {
 }
 
 /**
- * Return cached ratio if fresh; otherwise null (no network).
+ * Return cached ratio if exists; otherwise null.
+ * No TTL. No background refresh.
  */
 export async function getCachedRatio(url) {
+  if (!url) return null;
+  await ensureLoaded();
   const key = normalizeKey(url);
-  const map = await loadMap();
-  const rec = map[key];
-  if (!rec) return null;
-  if (Date.now() - (rec.t || 0) > TTL_MS) return null; // expired
-  return typeof rec.r === "number" ? rec.r : null;
+  const rec = mem[key];
+  return rec && typeof rec.r === "number" ? rec.r : null;
 }
 
 /**
- * Get ratio with revalidation:
- * - If fresh cache exists, return immediately
- * - Else fetch from server, store, and return
+ * Return ratio; fetch-and-store only if missing.
+ * No revalidation for existing entries.
  */
 export async function getOrFetchRatio(url) {
+  if (!url) return null;
+  await ensureLoaded();
   const full = ensureHttpsLocal(url);
   const key = normalizeKey(full);
-  const map = await loadMap();
-  const rec = map[key];
 
-  if (rec && Date.now() - (rec.t || 0) <= TTL_MS && typeof rec.r === "number") {
-    return rec.r; // fresh
+  const existing = mem[key];
+  if (existing && typeof existing.r === "number") {
+    return existing.r; // already cached
   }
 
-  // de-duplicate concurrent calls
   if (!inFlight.has(key)) {
     inFlight.set(
       key,
       (async () => {
         const r = await fetchRatio(full);
         const ratio = typeof r === "number" && isFinite(r) ? r : null;
-        if (ratio) {
-          map[key] = { r: ratio, t: Date.now() };
-          await saveMap(map);
+        if (ratio != null) {
+          mem[key] = { r: ratio, t: Date.now() };
+          pruneIfNeeded();
+          scheduleSave();
         }
         inFlight.delete(key);
         return ratio;
@@ -106,10 +120,10 @@ export async function getOrFetchRatio(url) {
 }
 
 /**
- * Warm up cache for a list of URLs (limited concurrency).
- * Returns count of successfully cached ratios.
+ * Warm cache for a list of URLs (only misses are fetched).
  */
 export async function warm(urls = [], { concurrency = 6 } = {}) {
+  await ensureLoaded();
   const uniq = Array.from(new Set(urls.filter(Boolean))).map(ensureHttpsLocal);
   let i = 0;
   let ok = 0;
@@ -118,41 +132,22 @@ export async function warm(urls = [], { concurrency = 6 } = {}) {
     while (i < uniq.length) {
       const url = uniq[i++];
       const key = normalizeKey(url);
-      // Skip if fresh
-      const map = await loadMap();
-      const rec = map[key];
-      if (rec && Date.now() - (rec.t || 0) <= TTL_MS) continue;
+      if (mem[key] && typeof mem[key].r === "number") continue; // skip hits
       const r = await getOrFetchRatio(url);
       if (typeof r === "number") ok++;
     }
   }
-  await Promise.all(Array.from({ length: concurrency }, worker));
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, 8)) }, worker));
   return ok;
 }
 
-/**
- * Force refresh specific URL (ignores TTL).
- */
-export async function forceRefresh(url) {
-  const full = ensureHttpsLocal(url);
-  const map = await loadMap();
-  const r = await fetchRatio(full);
-  if (typeof r === "number" && isFinite(r)) {
-    const key = normalizeKey(full);
-    map[key] = { r, t: Date.now() };
-    await saveMap(map);
-    return r;
-  }
-  return null;
-}
-
-/**
- * Optional helpers
- */
+// Optional helpers
 export async function clearAll() {
+  mem = {};
+  scheduleSave();
   await AsyncStorage.removeItem(STORE_KEY);
 }
 export async function stats() {
-  const map = await loadMap();
-  return { count: Object.keys(map).length, ttlDays: TTL_MS / 86400000 };
+  await ensureLoaded();
+  return { count: Object.keys(mem).length };
 }

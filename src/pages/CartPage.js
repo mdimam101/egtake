@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
 import CartItem from "../components/CartItem";
+import SkeletonCard from "../components/SkeletonCard";
 import UserProductCart from "../components/UserProductCart";
 import { GUEST_CART_KEY } from "../helper/guestCart";
 
@@ -48,8 +49,14 @@ const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
   const [unselectedItems, setUnselectedItems] = useState([]);
   const [latestProducts, setLatestProducts] = useState([]);
+  const [recoPhaseCart, setRecoPhaseCart] = useState([]); // first 6
+  const [recoAllCart, setRecoAllCart] = useState([]); // full list
+  const recoDisplayCart = recoAllCart.length ? recoAllCart : recoPhaseCart;
 
   const user = useSelector((state) => state?.userState?.user);
+
+  // use for recomended product list
+  const recommendedProductList = useSelector((s) => s.productState.productList);
 
   const fetchCartItems = async () => {
     try {
@@ -242,6 +249,24 @@ const CartPage = () => {
   const allSelected =
     cartItems.length > 0 && selectedItems.length === cartItems.length;
 
+  const canCheckout = selectedItems.length > 0;
+
+  useEffect(() => {
+    if (
+      !Array.isArray(recommendedProductList) ||
+      recommendedProductList.length === 0
+    ) {
+      setRecoPhaseCart([]);
+      setRecoAllCart([]);
+      return;
+    }
+    const first6 = recommendedProductList.slice(0, 6);
+    setRecoPhaseCart(first6);
+    setRecoAllCart([]);
+    const id = setTimeout(() => setRecoAllCart(recommendedProductList), 0); // hobohobo
+    return () => clearTimeout(id);
+  }, [recommendedProductList]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -276,26 +301,63 @@ const CartPage = () => {
         )}
         <View style={{ marginTop: 20 }}>
           <Text style={styles.heading}>🛍 Recommended</Text>
-          <View style={styles.masonryContainer}>
-            <View style={styles.column}>
-              {latestProducts
-                .filter((_, idx) => idx % 2 === 0)
-                .map((item, index) => (
-                  <View key={index} style={styles.cardWrapper}>
-                    <UserProductCart productData={item} />
-                  </View>
-                ))}
+
+          {/* skeleton যখন ফাঁকা */}
+          {!recoDisplayCart.length ? (
+            <View style={styles.masonryContainer}>
+              <View style={styles.column}>
+                {[...Array(8)]
+                  .filter((_, idx) => idx % 2 === 0)
+                  .map((_, i) => (
+                    <View
+                      key={`recoCart_skel_L_${i}`}
+                      style={styles.cardWrapper}
+                    >
+                      <SkeletonCard />
+                    </View>
+                  ))}
+              </View>
+              <View style={styles.column}>
+                {[...Array(8)]
+                  .filter((_, idx) => idx % 2 !== 0)
+                  .map((_, i) => (
+                    <View
+                      key={`recoCart_skel_R_${i}`}
+                      style={styles.cardWrapper}
+                    >
+                      <SkeletonCard />
+                    </View>
+                  ))}
+              </View>
             </View>
-            <View style={styles.column}>
-              {latestProducts
-                .filter((_, idx) => idx % 2 !== 0)
-                .map((item, index) => (
-                  <View key={index} style={styles.cardWrapper}>
-                    <UserProductCart productData={item} />
-                  </View>
-                ))}
+          ) : (
+            <View style={styles.masonryContainer}>
+              <View style={styles.column}>
+                {recoDisplayCart
+                  .filter((_, idx) => idx % 2 === 0)
+                  .map((item, index) => (
+                    <View
+                      key={`recoCart_L_${index}`}
+                      style={styles.cardWrapper}
+                    >
+                      <UserProductCart productData={item} />
+                    </View>
+                  ))}
+              </View>
+              <View style={styles.column}>
+                {recoDisplayCart
+                  .filter((_, idx) => idx % 2 !== 0)
+                  .map((item, index) => (
+                    <View
+                      key={`recoCart_R_${index}`}
+                      style={styles.cardWrapper}
+                    >
+                      <UserProductCart productData={item} />
+                    </View>
+                  ))}
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
 
@@ -318,17 +380,17 @@ const CartPage = () => {
             <Text style={styles.saveText}>Saved: ৳{totalSaved}</Text>
           </View>
 
-          {selectedItems.length > 0 && (
-            <TouchableOpacity
-              onPress={handleCheckout}
-              style={styles.checkoutBtn}
-            >
-              <Text style={styles.checkoutText}>
-                Checkout ({selectedItems.length})
-              </Text>
-              {/* <Text style={styles.checkoutNote}>⏳ Almost sold out!</Text> */}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={canCheckout ? handleCheckout : undefined}
+            disabled={!canCheckout}
+            style={[styles.checkoutBtn, !canCheckout && { opacity: 0.4 }]}
+            activeOpacity={canCheckout ? 0.7 : 1}
+            accessibilityState={{ disabled: !canCheckout }}
+          >
+            <Text style={styles.checkoutText}>
+              Checkout ({selectedItems.length})
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

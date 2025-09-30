@@ -34,6 +34,7 @@ import { setUnder99List } from "../store/under99Slice";
 
 const PAGE_SIZE = 24;
 
+// Home Page
 const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -249,11 +250,11 @@ const HomePage = () => {
 
   // ============== RUN IT: সবসময়  ==============
   useEffect(() => {
-    // if (optimizedProducts.length === 0) {
+    if (optimizedProducts.length === 0) {
     fetchAllProducts();
-    // } else {
+    } else {
     setLoading(false);
-    // }
+    }
   }, []);
 
   // ✅ KEEP: store hydrated → instantly show section
@@ -495,7 +496,7 @@ const HomePage = () => {
         maxToRenderPerBatch={3}
         windowSize={2}
         updateCellsBatchingPeriod={50}
-        removeClippedSubviews
+        // removeClippedSubviews
         renderItem={({ item }) => (
           <UserSlideProductCard
             productData={item.isLast ? undefined : item} // last-card safe
@@ -520,12 +521,12 @@ const HomePage = () => {
 
     if (prevCategory === null && selectedCategory === null) return;
 
-    if (isGoingBackToAll) slideAnim.setValue(-300);
-    else if (isGoingToCategory || selectedCategory) slideAnim.setValue(300);
+    if (isGoingBackToAll) slideAnim.setValue(-350);
+    else if (isGoingToCategory || selectedCategory) slideAnim.setValue(350);
 
     Animated.timing(slideAnim, {
       toValue: 0,
-      duration: 300,
+      duration: 350,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
@@ -595,7 +596,7 @@ const HomePage = () => {
             maxToRenderPerBatch={15}
             windowSize={2}
             updateCellsBatchingPeriod={50}
-            removeClippedSubviews={false}
+            removeClippedSubviews={true}
             extraData={visibleCount}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}
@@ -658,7 +659,7 @@ const HomePage = () => {
             maxToRenderPerBatch={6}
             windowSize={2}
             updateCellsBatchingPeriod={50}
-            removeClippedSubviews={false}
+            removeClippedSubviews={true}
             extraData={visibleCount}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}

@@ -17,7 +17,6 @@ export const generateOptimizedVariants = (products = []) => {
     const variants = Array.isArray(item.variants) ? item.variants : [];
     const baseCreatedTs = +getCreatedAt(item);
 
-    // ❌ আগের maxShow লজিক বাদ
     // ✅ এখন সব variants দেখাবে
     if (variants.length === 0) {
       const v = {

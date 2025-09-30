@@ -1,5 +1,4 @@
-// ✅ CheckoutPage — with Delivery Option (Free/Express) + Payment (COD)
-// Paste this entire file over your current CheckoutPage.js
+// ✅ CheckoutPage — Delivery Option (Narayanganj / Dhaka / Others) + Payment (COD)
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -27,7 +26,9 @@ import { GUEST_CART_KEY } from "../helper/guestCart";
 import updateProductStock from "../helper/updateProductStock";
 
 const PLACEHOLDER_COLOR = "#999";
-const MIN_FREE_NAR = 499; // ✅ threshold for Narayanganj
+const MIN_FREE_NAR = 499;   // ✅ Narayanganj
+const MIN_FREE_DHK = 999;   // ✅ Dhaka
+const MIN_FREE_OTH = 1500;  // ✅ Others
 
 const CheckoutPage = () => {
   const navigation = useNavigation();
@@ -53,9 +54,10 @@ const CheckoutPage = () => {
     district: "", // Dhaka | Narayanganj | Others
   });
 
-  // ✅ delivery option: "FREE" | "EXPRESS" | "NAR120" (only for Narayanganj)
+  // ✅ delivery option: "FREE" | "EXPRESS" | "NAR120" | "STD"
+  //  - STD: non-Narayanganj standard (Dhaka/Others) under threshold
   const [deliveryOption, setDeliveryOption] = useState("FREE");
-  const [userTouchedDelivery, setUserTouchedDelivery] = useState(false); // ✅ block auto-change after user action
+  const [userTouchedDelivery, setUserTouchedDelivery] = useState(false);
 
   // ✅ payment option (for now only COD)
   const [paymentMethod, setPaymentMethod] = useState("COD");
@@ -84,35 +86,6 @@ const CheckoutPage = () => {
     })();
   }, []);
 
-  // If user switches away from Narayanganj, ensure EXPRESS/NAR120 are not selected
-  useEffect(() => {
-    if (
-      formData.district !== "Narayanganj" &&
-      (deliveryOption === "EXPRESS" || deliveryOption === "NAR120")
-    ) {
-      setDeliveryOption("FREE");
-      setUserTouchedDelivery(false); // reset touch since we changed district
-    }
-  }, [formData.district, deliveryOption]);
-
-  // ✅ Auto-select default for Narayanganj based on subtotal (only if user hasn't manually changed)
-  // useEffect(() => {
-  //   if (formData.district === "Narayanganj" && !userTouchedDelivery) {
-  //     const desired = baseTotal >= MIN_FREE_NAR ? "FREE" : "NAR120";
-  //     if (deliveryOption !== desired) setDeliveryOption(desired);
-  //   }
-  // }, [formData.district, /* baseTotal below */, userTouchedDelivery, deliveryOption]);
-
-  useEffect(() => {
-    if (
-      formData.district === "Narayanganj" &&
-      baseTotal < MIN_FREE_NAR &&
-      deliveryOption === "FREE"
-    ) {
-      setDeliveryOption("NAR120"); // force paid standard
-    }
-  }, [formData.district, baseTotal, deliveryOption]);
-
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -135,21 +108,83 @@ const CheckoutPage = () => {
     }, 0);
   }, [selectedItems]);
 
-  // Narayanganj free-eligibility
-  const narFreeAllowed =
-    formData.district === "Narayanganj" ? baseTotal >= MIN_FREE_NAR : true;
-  const freeDisabled = formData.district === "Narayanganj" && !narFreeAllowed;
+  // ✅ Free threshold helpers (all districts)
+  const getFreeThreshold = (district) => {
+    if (district === "Narayanganj") return MIN_FREE_NAR; // 499
+    if (district === "Dhaka") return MIN_FREE_DHK;       // 999
+    if (district === "Others") return MIN_FREE_OTH;      // 1500
+    return Infinity;
+  };
 
-  // ✅ delivery charge depends on district + selected delivery option
-  const expressAvailable = formData.district === "Narayanganj";
+  const freeEligible =
+    formData.district ? baseTotal >= getFreeThreshold(formData.district) : true;
 
+  const freeDisabled = !!formData.district && !freeEligible;
+
+  const remainingForFree = formData.district
+    ? Math.max(0, getFreeThreshold(formData.district) - baseTotal)
+    : 0;
+
+  // ✅ Narayanganj-only guard: under 499 হলে FREE থাকলে NAR120-এ ফোর্স
+  useEffect(() => {
+    if (
+      formData.district === "Narayanganj" &&
+      baseTotal < MIN_FREE_NAR &&
+      deliveryOption === "FREE"
+    ) {
+      setDeliveryOption("NAR120");
+    }
+  }, [formData.district, baseTotal, deliveryOption]);
+
+  // ✅ District switch normalization:
+  //  - Narayanganj: STD disallow, normalize to FREE/NAR120
+  //  - Non-Narayanganj: remove NAR-specific selections; choose FREE/STD based on threshold
+  useEffect(() => {
+    const d = formData.district;
+    if (!d) return;
+
+    if (d === "Narayanganj") {
+      if (deliveryOption === "STD") {
+        setDeliveryOption(baseTotal >= MIN_FREE_NAR ? "FREE" : "NAR120");
+        setUserTouchedDelivery(false);
+      }
+      return;
+    }
+
+    if (deliveryOption === "EXPRESS" || deliveryOption === "NAR120") {
+      setDeliveryOption(freeEligible ? "FREE" : "STD");
+      setUserTouchedDelivery(false);
+    }
+  }, [formData.district, deliveryOption, baseTotal, freeEligible]);
+
+  // ✅ Dhaka/Others: subtotal crossing threshold → auto toggle STD ↔ FREE
+  useEffect(() => {
+    if (
+      !userTouchedDelivery &&
+      (formData.district === "Dhaka" || formData.district === "Others")
+    ) {
+      if (!freeEligible && deliveryOption === "FREE") {
+        setDeliveryOption("STD");
+      }
+      if (freeEligible && deliveryOption === "STD") {
+        setDeliveryOption("FREE");
+      }
+    }
+  }, [formData.district, freeEligible, deliveryOption, userTouchedDelivery]);
+
+  // ✅ delivery charge depends on district + selection
   const computeDeliveryCharge = (district, option) => {
     if (district === "Narayanganj") {
       if (option === "EXPRESS") return 150;
-      if (option === "NAR120") return 120; // ✅ new paid standard for small orders
-      return 0; // FREE
+      if (option === "NAR120") return 120;
+      return 0; // FREE (guarded by effect for under-499)
     }
-    // Non-Narayanganj: keep existing district pricing; EXPRESS not available visually
+    if (district === "Dhaka") {
+      return baseTotal >= MIN_FREE_DHK ? 0 : districtCharge(district);
+    }
+    if (district === "Others") {
+      return baseTotal >= MIN_FREE_OTH ? 0 : districtCharge(district);
+    }
     return districtCharge(district);
   };
 
@@ -165,15 +200,12 @@ const CheckoutPage = () => {
     return 9;
   }, [formData.district, baseTotal]);
 
-  // if order 3000+ then -150Tk
-  //const saveMoney = baseTotal > 3000 ? 150 : 0;
-
   const Subtotal =
     baseTotal +
     deliveryCharge +
     handlingCharge +
     processingFee -
-    discount // if needed(-saveMoney);
+    discount;
 
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -280,10 +312,9 @@ const CheckoutPage = () => {
       });
 
       if (response?.data?.success) {
-        
         const idArray = selectedItems
-          .filter((item) => item._id && !item?.isStoreData) // শর্ত মিলে এমনগুলা রাখো
-          .map((item) => item._id); // শুধু _id নাও
+          .filter((item) => item._id && !item?.isStoreData)
+          .map((item) => item._id);
 
         await Promise.all(
           selectedItems.map((item) =>
@@ -295,6 +326,7 @@ const CheckoutPage = () => {
             )
           )
         );
+
         if (couponCode && discount > 0) {
           try {
             await axios.post(
@@ -304,6 +336,7 @@ const CheckoutPage = () => {
             );
           } catch {}
         }
+
         setModalVisible(true);
          // যেখানে order confirm success হয়:
         await clearGuestCart(); // ✅ guest cart মুছে যাবে
@@ -320,11 +353,11 @@ const CheckoutPage = () => {
     }
   };
 
-  //delete local (add to cart data)
+  // delete local (add to cart data)
   const clearGuestCart = async () => {
-  await AsyncStorage.removeItem(GUEST_CART_KEY);
-  fetchUserAddToCart(false);
-};
+    await AsyncStorage.removeItem(GUEST_CART_KEY);
+    fetchUserAddToCart(false);
+  };
 
   const handleRemove = async (productIdArray) => {
     const result = await deleteCartItemWhenOrderplace(productIdArray);
@@ -332,10 +365,14 @@ const CheckoutPage = () => {
       fetchUserAddToCart(true);
     }
   };
+
   const BUTTON_H = 56;
 
   const deliveryLabelValue =
     deliveryCharge === 0 ? "FREE" : `৳${deliveryCharge}`;
+
+    // ✅ FREE কার্ডের জন্য আলাদা লেবেল: সবসময় FREE দেখাবে
+  const freeCardPriceLabel = "FREE";
 
   return (
     <View style={styles.container}>
@@ -425,22 +462,22 @@ const CheckoutPage = () => {
           )}
         </View>
 
-        {/* Delivery Options (shown after district selected) */}
+        {/* Delivery Options (after district selected) */}
         {formData.district && (
           <View style={styles.optionSection}>
             {formData.district === "Narayanganj" && (
               <Text style={styles.sectionTitle}>📦 Delivery Option</Text>
             )}
 
-            {/* FREE (standard) */}
+            {/* FREE (always shown; may be locked below threshold) */}
             <TouchableOpacity
               style={[
                 styles.optionCard,
                 deliveryOption === "FREE" && styles.optionCardActive,
-                (isSubmitting || freeDisabled) && styles.disabledCard, // 🔒 visual lock
+                (isSubmitting || freeDisabled) && styles.disabledCard, // locked look
               ]}
               onPress={() => {
-                if (isSubmitting || freeDisabled) return; // 🔒 block click
+                if (isSubmitting || freeDisabled) return;
                 setDeliveryOption("FREE");
                 setUserTouchedDelivery(true);
               }}
@@ -458,27 +495,40 @@ const CheckoutPage = () => {
                 <Text style={styles.optionTitle}>
                   {formData.district === "Narayanganj"
                     ? "Free Delivery Mini ৳499+"
-                    : `Delivery commitment`}
+                    : formData.district === "Dhaka"
+                    ? "Free Delivery ৳999+"
+                    : formData.district === "Others"
+                    ? "Free Delivery ৳1500+"
+                    : "Delivery commitment"}
                 </Text>
                 <Text style={styles.optionSub}>
                   {formData.district === "Narayanganj"
-                    ? `Delivery time 3–36 hours \n Minimum Order ৳499+${
-                        freeDisabled ? "" : ""
-                      }`
+                    ? "Delivery time 3–36 hours"
                     : formData.district === "Dhaka"
-                    ? `Delivery time within 48 hours`
-                    : "Delivery time within 1~3 days"}
+                    ? "Delivery time within 48 hours"
+                    : "Delivery time within 1–3 days"}
                 </Text>
+
+                {freeDisabled && (
+                  <Text style={styles.lockHint}>
+                    Add ৳{remainingForFree} more to unlock FREE
+                  </Text>
+                )}
               </View>
-              <Text style={styles.optionPrice}>
-                {formData.district === "Narayanganj"
-                  ? "FREE"
-                  : `৳${districtCharge(formData.district)}`}
-              </Text>
+              <Text style={styles.optionPrice}>{freeCardPriceLabel}</Text>
+
+
+              {/* small lock badge when locked */}
+              {freeDisabled && (
+                <View style={styles.lockBadge}>
+                  <Ionicons name="lock-closed" size={12} color="#555" />
+                  <Text style={styles.lockBadgeText}>Locked</Text>
+                </View>
+              )}
             </TouchableOpacity>
 
-            {/* ✅ NEW: Narayanganj Standard (৳120) — only for Narayanganj */}
-            {expressAvailable && (
+            {/* ✅ Narayanganj Standard (৳120) — only for Narayanganj */}
+            {formData.district === "Narayanganj" && (
               <TouchableOpacity
                 style={[
                   styles.optionCard,
@@ -509,7 +559,7 @@ const CheckoutPage = () => {
             )}
 
             {/* EXPRESS — only for Narayanganj */}
-            {expressAvailable && (
+            {formData.district === "Narayanganj" && (
               <TouchableOpacity
                 style={[
                   styles.optionCard,
@@ -538,6 +588,74 @@ const CheckoutPage = () => {
                   </Text>
                 </View>
                 <Text style={styles.optionPrice}>৳150</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ✅ Dhaka Standard (৳50) — only when < 999 */}
+            {formData.district === "Dhaka" && !freeEligible && (
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  deliveryOption === "STD" && styles.optionCardActive,
+                  isSubmitting && styles.disabledCard,
+                ]}
+                onPress={() => {
+                  if (isSubmitting) return;
+                  setDeliveryOption("STD");
+                  setUserTouchedDelivery(true);
+                }}
+                disabled={isSubmitting}
+              >
+                <View style={styles.radioDotWrap}>
+                  <View
+                    style={[
+                      styles.radioDot,
+                      deliveryOption === "STD" && styles.radioDotActive,
+                    ]}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.optionTitle}>Standard Delivery</Text>
+                  <Text style={styles.optionSub}>
+                    Delivery time within 48 hours
+                  </Text>
+                </View>
+                <Text style={styles.optionPrice}>৳{districtCharge("Dhaka")}</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ✅ Others Standard (৳130) — only when < 1500 */}
+            {formData.district === "Others" && !freeEligible && (
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  deliveryOption === "STD" && styles.optionCardActive,
+                  isSubmitting && styles.disabledCard,
+                ]}
+                onPress={() => {
+                  if (isSubmitting) return;
+                  setDeliveryOption("STD");
+                  setUserTouchedDelivery(true);
+                }}
+                disabled={isSubmitting}
+              >
+                <View style={styles.radioDotWrap}>
+                  <View
+                    style={[
+                      styles.radioDot,
+                      deliveryOption === "STD" && styles.radioDotActive,
+                    ]}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.optionTitle}>Standard Delivery</Text>
+                  <Text style={styles.optionSub}>
+                    Delivery time within 1–3 days
+                  </Text>
+                </View>
+                <Text style={styles.optionPrice}>
+                  ৳{districtCharge("Others")}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -665,17 +783,6 @@ const CheckoutPage = () => {
             </View>
           )}
 
-          {/* {saveMoney > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={[styles.labelText, { color: "green" }]}>
-                ৳3000+ ৳150 OFF
-              </Text>
-              <Text style={[styles.amountText, { color: "green" }]}>
-                -৳{saveMoney}
-              </Text>
-            </View>
-          )} */}
-
           <View style={[styles.summaryRow, { marginTop: 10 }]}>
             <Text
               style={[styles.labelText, { fontWeight: "bold", color: "red" }]}
@@ -734,7 +841,7 @@ const CheckoutPage = () => {
 export default CheckoutPage;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 14, backgroundColor: "#fff"},
+  container: { flex: 1, padding: 14, backgroundColor: "#fff" },
 
   headerTitle: {
     height: 75,
@@ -887,5 +994,30 @@ const styles = StyleSheet.create({
   },
   orderBtnDisabled: {
     opacity: 0.7,
+  },
+
+  // 🔒 free-locked hint/badge
+  lockHint: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#b45309", // amber-ish
+  },
+  lockBadge: {
+    position: "absolute",
+    top: 8,
+    right: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#f5f5f5",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  lockBadgeText: {
+    fontSize: 11,
+    color: "#555",
   },
 });

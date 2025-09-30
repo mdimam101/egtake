@@ -1,6 +1,6 @@
 // components/LazyImage.js
-import React, { useState } from "react";
-import { Image, View, ActivityIndicator, StyleSheet } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
 
 const LazyImage = ({ source, style }) => {
   const [loading, setLoading] = useState(true);

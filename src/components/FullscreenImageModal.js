@@ -28,7 +28,12 @@ const normalizeUri = (u = "") =>
   u.replace(/^http:\/\//i, "https://").replace(/ /g, "%20");
 
 // ---- Single zoomable slide (unchanged logic)
-const ZoomableSlide = ({ uri, onZoomingChange = () => {}, resetToken, panEnabled }) => {
+const ZoomableSlide = ({
+  uri,
+  onZoomingChange = () => {},
+  resetToken,
+  panEnabled,
+}) => {
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const tx = useSharedValue(0);
@@ -36,7 +41,8 @@ const ZoomableSlide = ({ uri, onZoomingChange = () => {}, resetToken, panEnabled
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
 
-  const MAX = 4, MIN = 1;
+  const MAX = 4,
+    MIN = 1;
 
   useEffect(() => {
     scale.value = withTiming(1);
@@ -63,7 +69,9 @@ const ZoomableSlide = ({ uri, onZoomingChange = () => {}, resetToken, panEnabled
     });
 
   const pinch = Gesture.Pinch()
-    .onBegin(() => { savedScale.value = scale.value; })
+    .onBegin(() => {
+      savedScale.value = scale.value;
+    })
     .onChange((e) => {
       const next = Math.min(MAX, Math.max(MIN, savedScale.value * e.scale));
       scale.value = next;
@@ -93,21 +101,38 @@ const ZoomableSlide = ({ uri, onZoomingChange = () => {}, resetToken, panEnabled
 
   const composed = Gesture.Simultaneous(doubleTap, pinch, pan);
   const rStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
+    transform: [
+      { translateX: tx.value },
+      { translateY: ty.value },
+      { scale: scale.value },
+    ],
   }));
 
   return (
     <View style={styles.slide}>
       <GestureDetector gesture={composed}>
         <Animated.View style={rStyle}>
-          <Image source={{ uri }} style={styles.fullImage} contentFit="contain" transition={80} />
+          <Image
+            source={{ uri }}
+            style={styles.fullImage}
+            contentFit="contain"
+            transition={80}
+            cachePolicy="disk"
+            allowDownscaling
+            recycleMemory
+          />
         </Animated.View>
       </GestureDetector>
     </View>
   );
 };
 
-const FullscreenImageModal = ({ visible, onClose, images = [], initialIndex = 0 }) => {
+const FullscreenImageModal = ({
+  visible,
+  onClose,
+  images = [],
+  initialIndex = 0,
+}) => {
   const listRef = useRef(null);
   const [index, setIndex] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -117,7 +142,10 @@ const FullscreenImageModal = ({ visible, onClose, images = [], initialIndex = 0 
   useEffect(() => {
     if (visible && listRef.current) {
       setTimeout(() => {
-        listRef.current?.scrollToIndex({ index: initialIndex, animated: false });
+        listRef.current?.scrollToIndex({
+          index: initialIndex,
+          animated: false,
+        });
         setIndex(initialIndex);
         setResetToken((n) => n + 1);
         setIsZoomed(false);
@@ -136,14 +164,14 @@ const FullscreenImageModal = ({ visible, onClose, images = [], initialIndex = 0 
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
 
-const renderItem = ({ item }) => (
-  <ZoomableSlide
-    // uri={normalizeUri(item)}   
-    uri={normalizeUri(item.replace("http://", "https://"))}        // ✅ http → https
-    resetToken={resetToken}
-    panEnabled={isZoomed}
-    onZoomingChange={(z) => setIsZoomed(z)}
-  />
+  const renderItem = ({ item }) => (
+    <ZoomableSlide
+      // uri={normalizeUri(item)}
+      uri={normalizeUri(item.replace("http://", "https://"))} // ✅ http → https
+      resetToken={resetToken}
+      panEnabled={isZoomed}
+      onZoomingChange={(z) => setIsZoomed(z)}
+    />
   );
 
   return (
@@ -160,12 +188,14 @@ const renderItem = ({ item }) => (
       {/* <StatusBar style="light" backgroundColor="rgba(0,0,0,0.001)" translucent /> */}
 
       <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* <View style={{height:40, backfaceVisibility:"#000"}}></View> */}
+        {/* <View style={{height:40, backfaceVisibility:"#000"}}></View> */}
         <View style={styles.overlay}>
           {/* top bar */}
           <View style={styles.topBar}>
             <View style={{ flex: 1 }} />
-            <Text style={styles.counter}>{index + 1} / {images.length}</Text>
+            <Text style={styles.counter}>
+              {index + 1} / {images.length}
+            </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color="#fff" />
             </TouchableOpacity>
@@ -180,7 +210,11 @@ const renderItem = ({ item }) => (
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             initialScrollIndex={initialIndex}
-            getItemLayout={(_, i) => ({ length: SCREEN_W, offset: SCREEN_W * i, index: i })}
+            getItemLayout={(_, i) => ({
+              length: SCREEN_W,
+              offset: SCREEN_W * i,
+              index: i,
+            })}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             scrollEnabled={!isZoomed}
@@ -194,16 +228,25 @@ const renderItem = ({ item }) => (
 export default FullscreenImageModal;
 
 const styles = StyleSheet.create({
-  overlay: {flex: 1, backgroundColor: "#000" },
+  overlay: { flex: 1, backgroundColor: "#000" },
   topBar: {
     paddingBottom: 10,
-    paddingTop:50,
+    paddingTop: 50,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
   },
   counter: { color: "#fff", fontSize: 12, opacity: 0.85, marginRight: 8 },
-  closeBtn: { backgroundColor: "rgba(255,255,255,0.18)", padding: 8, borderRadius: 16 },
-  slide: { width: SCREEN_W, height: SCREEN_H, justifyContent: "center", alignItems: "center" },
+  closeBtn: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    padding: 8,
+    borderRadius: 16,
+  },
+  slide: {
+    width: SCREEN_W,
+    height: SCREEN_H,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   fullImage: { width: SCREEN_W, height: SCREEN_H * 0.86 }, // same ratio as before
 });
