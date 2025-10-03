@@ -15,6 +15,7 @@ import {
 import Toast from "react-native-toast-message";
 import SummaryApi from "../common/SummaryApi";
 import Context from "../context";
+import { ensureDeviceId, getDeviceId } from "../utils/deviceId";
 
 const LoginPage = () => {
   const infoText = "Don't have an account?";
@@ -34,6 +35,7 @@ const LoginPage = () => {
 
     // ✅ Always normalize email before API call
     const normalizedEmail = (data.email || "").trim().toLowerCase();
+     const deviceId = (await getDeviceId()) || (await ensureDeviceId());
 
     try {
       const response = await axios({

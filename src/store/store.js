@@ -7,6 +7,7 @@ import salesReducer from "../store/salesSlice";
 import trendingReducer from "../store/trendingSlice";
 import under99Reducer from "../store/under99Slice";
 import userReducer from "../store/userSlice"; // 🔁 adjust path if needed
+import commonReducer from "./commonInfoSlice";
 
 const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
     handCraftState: handCraftReducer,
     under99State: under99Reducer,
     salesState: salesReducer,
+    commonState: commonReducer,
   },
 });
 

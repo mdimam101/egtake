@@ -2,16 +2,16 @@ import React from 'react';
 import { View, Image, Text, StyleSheet } from 'react-native';
 
 const CheckoutItemCard = ({ item }) => {
-   const { productId, Quantity, color, size, image } = item;
+   const { productId, quantity, color, size, image } = item;
   const price = productId?.selling  || 0;//|| productId?.price
-  const total = price * Quantity;
+  const total = price * quantity;
 
   return (
     <View style={styles.card}>
        <Image source={{ uri: image.replace("http://", "https://") }} style={styles.image} />
       <View style={styles.details}>
         <Text style={styles.price}>৳{total}</Text>
-        <Text style={styles.qty}>Qty: {Quantity}</Text>
+        <Text style={styles.qty}>Qty: {quantity}</Text>
       </View>
     </View>
   );

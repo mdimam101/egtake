@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -180,7 +180,7 @@ const CartPage = () => {
     })
     .reduce((acc, item) => {
       const result = findStockFromLatest(item, latestProducts);
-      return acc + result.price * item.Quantity;
+      return acc + result.price * item.quantity;
     }, 0);
 
   const totalSaved = cartItems
@@ -191,7 +191,7 @@ const CartPage = () => {
     .reduce((acc, item) => {
       const original = item?.productId?.price || 0;
       const sell = item?.productId?.selling || 0;
-      return acc + (original - sell) * item.Quantity;
+      return acc + (original - sell) * item.quantity;
     }, 0);
 
   const handleCheckout = () => {
@@ -267,6 +267,14 @@ const CartPage = () => {
     return () => clearTimeout(id);
   }, [recommendedProductList]);
 
+  // Memoize left/right split for recommended products
+  const recoSplitCart = useMemo(() => {
+    return {
+      left: recoDisplayCart.filter((_, idx) => idx % 2 === 0),
+      right: recoDisplayCart.filter((_, idx) => idx % 2 !== 0),
+    };
+  }, [recoDisplayCart]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -333,28 +341,18 @@ const CartPage = () => {
           ) : (
             <View style={styles.masonryContainer}>
               <View style={styles.column}>
-                {recoDisplayCart
-                  .filter((_, idx) => idx % 2 === 0)
-                  .map((item, index) => (
-                    <View
-                      key={`recoCart_L_${index}`}
-                      style={styles.cardWrapper}
-                    >
-                      <UserProductCart productData={item} />
-                    </View>
-                  ))}
+                {recoSplitCart.left.map((item, index) => (
+                  <View key={`recoCart_L_${index}`} style={styles.cardWrapper}>
+                    <UserProductCart productData={item} />
+                  </View>
+                ))}
               </View>
               <View style={styles.column}>
-                {recoDisplayCart
-                  .filter((_, idx) => idx % 2 !== 0)
-                  .map((item, index) => (
-                    <View
-                      key={`recoCart_R_${index}`}
-                      style={styles.cardWrapper}
-                    >
-                      <UserProductCart productData={item} />
-                    </View>
-                  ))}
+                {recoSplitCart.right.map((item, index) => (
+                  <View key={`recoCart_R_${index}`} style={styles.cardWrapper}>
+                    <UserProductCart productData={item} />
+                  </View>
+                ))}
               </View>
             </View>
           )}
@@ -366,6 +364,8 @@ const CartPage = () => {
           <TouchableOpacity
             onPress={toggleSelectAll}
             style={styles.selectAllRow}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: allSelected }}
           >
             <View
               style={[styles.checkbox, allSelected ? styles.checked : null]}
@@ -385,6 +385,7 @@ const CartPage = () => {
             disabled={!canCheckout}
             style={[styles.checkoutBtn, !canCheckout && { opacity: 0.4 }]}
             activeOpacity={canCheckout ? 0.7 : 1}
+            accessibilityRole="button"
             accessibilityState={{ disabled: !canCheckout }}
           >
             <Text style={styles.checkoutText}>

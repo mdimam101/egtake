@@ -175,6 +175,11 @@ create_review: {
   url: `${BASE_URL}/api/account`,
   method: "delete",
 },
+ get_common_info: {
+  url: `${BASE_URL}/api/get-common-info`,
+  method: "get",
+},
+
 };
 
 export default SummaryApi;

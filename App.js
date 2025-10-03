@@ -43,6 +43,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SystemUI from "expo-system-ui";
 import { navigationRef } from "./src/common/navigationRef"; // না থাকলে createNavigationContainerRef দিয়ে বানাও
 import { GUEST_CART_KEY } from "./src/helper/guestCart";
+import { setCommonGetInfoList } from "./src/store/commonInfoSlice";
+import { ensureDeviceId } from "./src/utils/deviceId";
 
 const Stack = createNativeStackNavigator();
 
@@ -116,6 +118,30 @@ const AppWrapper = () => {
       SystemUI.setBackgroundColorAsync("#fff"); // পুরো সিস্টেম UI bg
     }
   }, []);
+
+  useEffect(() => {
+    // Create and persist deviceId on first app open
+    ensureDeviceId().catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    const getCommonInfo = async () => {
+      try {
+        const response = await axios({
+          method: SummaryApi.get_common_info.method,
+          url: SummaryApi.get_common_info.url,
+          withCredentials: true,
+        });
+        const result = response.data;
+        if (result.success) {
+          dispatch(setCommonGetInfoList(result.data));
+        }
+      } catch (error) {}
+    };
+
+    getCommonInfo();
+  }, []);
+
   return (
     <NewsTickerProvider>
       <Context.Provider

@@ -26,9 +26,6 @@ import { GUEST_CART_KEY } from "../helper/guestCart";
 import updateProductStock from "../helper/updateProductStock";
 
 const PLACEHOLDER_COLOR = "#999";
-const MIN_FREE_NAR = 499;   // ✅ Narayanganj
-const MIN_FREE_DHK = 999;   // ✅ Dhaka
-const MIN_FREE_OTH = 1500;  // ✅ Others
 
 const CheckoutPage = () => {
   const navigation = useNavigation();
@@ -45,6 +42,12 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitLockRef = useRef(false); // extra guard against rapid taps
   const user = useSelector((state) => state?.userState?.user);
+
+  const commonInfo = useSelector((s) => s.commonState.commonInfoList)
+
+  const MIN_FREE_NAR = commonInfo[0]?.nrGanjMiniOrdr;   // ✅ Narayanganj
+  const MIN_FREE_DHK = commonInfo[0]?.DhakaMiniOrdr;   // ✅ Dhaka
+  const MIN_FREE_OTH = commonInfo[0]?.OthersAreaMiniOrdr;  // ✅ Others
 
   // ✅ shipping form
   const [formData, setFormData] = useState({
@@ -104,7 +107,7 @@ const CheckoutPage = () => {
   const baseTotal = useMemo(() => {
     return selectedItems.reduce((acc, item) => {
       const price = item?.productId?.selling || 0;
-      return acc + price * item.Quantity;
+      return acc + price * item.quantity;
     }, 0);
   }, [selectedItems]);
 
@@ -259,6 +262,17 @@ const CheckoutPage = () => {
     }
   };
 
+  // Memoize selectedItems mapping for order payload
+  const orderPayloadItems = useMemo(() => selectedItems.map((item) => ({
+    productId: item.productId._id,
+    productName: item.productId.productName,
+    quantity: item.quantity,
+    price: (item?.productId?.selling || 0) * item.quantity,
+    size: item.size,
+    color: item.color,
+    image: item.image,
+  })), [selectedItems]);
+
   const handleSubmitOrder = async () => {
     if (!user?._id) {
       navigation.navigate("Signup");
@@ -288,15 +302,7 @@ const CheckoutPage = () => {
         deliveryOption === "EXPRESS" ? "Express" : "Normal";
 
       const orderPayload = {
-        items: selectedItems.map((item) => ({
-          productId: item.productId._id,
-          productName: item.productId.productName,
-          quantity: item.Quantity,
-          price: (item?.productId?.selling || 0) * item.Quantity,
-          size: item.size,
-          color: item.color,
-          image: item.image,
-        })),
+        items: orderPayloadItems,
         shippingDetails: { name, phone, address, district },
         deliveryType: deliveryTimeline,
         deliveryCharge,
@@ -322,7 +328,7 @@ const CheckoutPage = () => {
               item.productId._id,
               item.image,
               item.size,
-              item.Quantity
+              item.quantity
             )
           )
         );
@@ -334,7 +340,9 @@ const CheckoutPage = () => {
               { code: couponCode, orderId: response?.data?.orderId },
               { withCredentials: true }
             );
-          } catch {}
+          } catch (err) {
+            // console.log("❌ Coupon commit failed", err);
+          }
         }
 
         setModalVisible(true);
@@ -494,11 +502,11 @@ const CheckoutPage = () => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.optionTitle}>
                   {formData.district === "Narayanganj"
-                    ? "Free Delivery Mini ৳499+"
+                    ? `Free Delivery Mini ৳${MIN_FREE_NAR}+`
                     : formData.district === "Dhaka"
-                    ? "Free Delivery ৳999+"
+                    ? `Free Delivery ৳${MIN_FREE_DHK}+`
                     : formData.district === "Others"
-                    ? "Free Delivery ৳1500+"
+                    ? `Free Delivery ৳${MIN_FREE_OTH}+`
                     : "Delivery commitment"}
                 </Text>
                 <Text style={styles.optionSub}>
@@ -717,7 +725,7 @@ const CheckoutPage = () => {
               ৳
               {selectedItems.reduce((acc, item) => {
                 const original = item.productId?.price || 0;
-                return acc + original * item.Quantity;
+                return acc + original * item.quantity;
               }, 0)}
             </Text>
           </View>
@@ -729,7 +737,7 @@ const CheckoutPage = () => {
               {selectedItems.reduce((acc, item) => {
                 const original = item.productId?.price || 0;
                 const selling = item.productId?.selling || 0;
-                return acc + (original - selling) * item.Quantity;
+                return acc + (original - selling) * item.quantity;
               }, 0)}
             </Text>
           </View>
@@ -806,8 +814,10 @@ const CheckoutPage = () => {
         <TouchableOpacity
           style={[styles.orderBtn, isSubmitting && styles.orderBtnDisabled]}
           onPress={handleSubmitOrder}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !formData.name || !formData.phone || !formData.address || !formData.district}
           activeOpacity={isSubmitting ? 1 : 0.7}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSubmitting || !formData.name || !formData.phone || !formData.address || !formData.district }}
         >
           {isSubmitting ? (
             <View

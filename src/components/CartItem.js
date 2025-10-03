@@ -63,7 +63,7 @@ const CartItem = ({
 
     try {
       const liveStock = getLiveStock();
-      const currentQty = Number(product?.Quantity ?? product?.quantity ?? 1);
+      const currentQty = Number(product?.quantity ?? 1);
 
       if (currentQty >= liveStock) {
         Toast.show({ type: "info", text1: "Stock limit reached" });
@@ -79,7 +79,7 @@ const CartItem = ({
         }
         // UI refresh remains YOUR way
         refreshCart?.();
-        Toast.show({ type: "success", text1: "Quantity +1" });
+        Toast.show({ type: "success", text1: "quantity +1" });
         return;
       } else {
         const res = await increaseQuantity(product._id);
@@ -107,7 +107,7 @@ const CartItem = ({
           if (r.qty === 0) {
             Toast.show({ type: "success", text1: "Item removed" });
           } else {
-            Toast.show({ type: "success", text1: "Quantity −1" });
+            Toast.show({ type: "success", text1: "quantity −1" });
           }
           return;
         }
@@ -156,7 +156,7 @@ const CartItem = ({
 
   const liveStock = getLiveStock();
   const variantImage = product?.image;
-  const currentQty = Number(product?.Quantity ?? product?.quantity ?? 1);
+  const currentQty = Number( product?.quantity ?? 1);
   const sellingPrice = product?.selling * currentQty;
 
   let colorSize = "";

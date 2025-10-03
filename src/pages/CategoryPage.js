@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -9,8 +9,7 @@ import {
   View,
 } from "react-native";
 import { useSelector } from "react-redux";
-import SearchBar from "../components/SearchBar";
-import Context from "../context";
+import SearchBar, { SupportSheet } from "../components/SearchBar";
 import { trackBasic } from "../helper/trackBasic";
 
 // ✅ NEW: global navigation helper (no useNavigation hook)
@@ -24,6 +23,8 @@ const CategoryPage = () => {
   const getProductFromStore = useSelector(
     (state) => state.productState.productList
   );
+
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const categoryList = useSelector((state) => state.categoryState.categoryList);
 
@@ -71,7 +72,7 @@ const CategoryPage = () => {
 
   return (
     <View style={styles.mainContainer}>
-      <SearchBar />
+      <SearchBar  onOpenSupport={() => setSupportOpen(true)}/>
       <Text style={styles.title}>Chose Category</Text>
       <View style={styles.container}>
         {/* 🔵 Sidebar like category */}
@@ -136,6 +137,8 @@ const CategoryPage = () => {
           ))}
         </ScrollView>
       </View>
+      {/* visible support modal*/}
+      <SupportSheet visible={supportOpen} onClose={() => setSupportOpen(false)} />
     </View>
   );
 };

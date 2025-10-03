@@ -82,7 +82,7 @@ const SIZE_TYPE_NUMBER = [
 ];
 
 const getPrimaryImage = (item) =>
-    ensureHttps(item?.img || item?.variants?.[0]?.images?.[0] || "");
+  ensureHttps(item?.img || item?.variants?.[0]?.images?.[0] || "");
 
 // productDetailsPage
 const ProductDetails = ({ route }) => {
@@ -120,6 +120,8 @@ const ProductDetails = ({ route }) => {
   });
   const [loading, setLoading] = useState(true);
   const user = useSelector((state) => state?.userState?.user);
+
+  const commonInfo = useSelector((s) => s.commonState.commonInfoList);
 
   const [recoPhase, setRecoPhase] = useState([]); // first 6
   const [recoAll, setRecoAll] = useState([]); // full list (next tick)
@@ -219,7 +221,11 @@ const ProductDetails = ({ route }) => {
 
       const scrollToIndex = keys.findIndex((k) => k === selectedKey);
 
-      if (scrollToIndex !== -1 && imageSliderRef.current) {
+      if (
+        scrollToIndex !== -1 &&
+        imageSliderRef.current &&
+        imageSliderRef.current.scrollTo
+      ) {
         requestAnimationFrame(() => {
           imageSliderRef.current.scrollTo({
             x: screenWidth * scrollToIndex,
@@ -278,20 +284,9 @@ const ProductDetails = ({ route }) => {
           }
           // tracking
           trackBasic("product_view", { subCategory: fresh.subCategory });
-
-          // 🔁 recommendations
-          // const reco = await axios({
-          //   method: SummaryApi.category_wish_product.method,
-          //   url: SummaryApi.category_wish_product.url,
-          //   headers: { "Content-Type": "application/json" },
-          //   data: { category: fresh.category },
-          // });
-          // if (reco.data.success) {
-          // console.log("🦌◆recoreco.data.data",reco.data.data);
-          // setRecommendedProducts(reco.data.data || []);
-          // }
         }
-      } catch {
+      } catch (err) {
+        // Toast.show({ type: "error", text1: "Product fetch failed" });
       } finally {
         setLoading(false);
       }
@@ -437,28 +432,30 @@ const ProductDetails = ({ route }) => {
   };
 
   // get product review
- useEffect(() => {
-  if (!data?._id) return;
-  const controller = new AbortController();
-  let alive = true;
+  useEffect(() => {
+    if (!data?._id) return;
+    const controller = new AbortController();
+    let alive = true;
 
-  (async () => {
-    try {
-      const res = await axios.get(
-        SummaryApi.get_product_reviews(data._id),
-        { signal: controller.signal }               // ✅
-      );
-      if (alive && res.data.success) {
-        setReviews(res.data.data || []);
+    (async () => {
+      try {
+        const res = await axios.get(
+          SummaryApi.get_product_reviews(data._id),
+          { signal: controller.signal } // ✅
+        );
+        if (alive && res.data.success) {
+          setReviews(res.data.data || []);
+        }
+      } catch (e) {
+        // Toast.show({ type: "error", text1: "Failed to load reviews" });
       }
-    } catch (e) {
-      // ignore
-    }
-  })();
+    })();
 
-  return () => { alive = false; controller.abort(); };  // ✅
-}, [data?._id]);
-
+    return () => {
+      alive = false;
+      controller.abort();
+    }; // ✅
+  }, [data?._id]);
 
   const ACTION_BAR_HEIGHT = 105;
 
@@ -490,7 +487,7 @@ const ProductDetails = ({ route }) => {
       navigation.dispatch((state) => {
         // non-ProductDetails (sticky) রুটগুলো আলাদা করো
         // console.log("🦌◆🦌◆state.routes", state.routes.length);
-        
+
         const sticky = state.routes.filter((r) => r.name !== "ProductDetails");
 
         // আগের সব ProductDetails রুট
@@ -520,6 +517,22 @@ const ProductDetails = ({ route }) => {
     setReviews([]);
     setCurrentIndex(0);
   }, [id]);
+
+  const recoSplit = useMemo(() => {
+    if (!Array.isArray(recoDisplay)) return { left: [], right: [] };
+    return {
+      left: recoDisplay.filter((_, idx) => idx % 2 === 0),
+      right: recoDisplay.filter((_, idx) => idx % 2 !== 0),
+    };
+  }, [recoDisplay]);
+
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const onTextLayout = useCallback((e) => {
+    const lines = e?.nativeEvent?.lines?.length || 0;
+    // If more than 10 lines, show fade + keep CTA
+    if (lines > 10) setIsTruncated(true);
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>
@@ -780,9 +793,9 @@ const ProductDetails = ({ route }) => {
               onPress={() =>
                 openCommitmentModal(
                   "Free Delivery",
-                  `✓নারায়ণগঞ্জে ৪৯৯ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
-                  \n✓ঢাকা ৯৯৯+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
-                  \n✓নারায়ণগঞ্জ ও ঢাকার বাইরে ৯৯৯+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  `✓নারায়ণগঞ্জে ${commonInfo[0]?.nrGanjMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  \n✓ঢাকা ${commonInfo[0]?.DhakaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  \n✓নারায়ণগঞ্জ ও ঢাকার বাইরে ${commonInfo[0]?.OthersAreaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
                   \n✓--Narayanganj Express delivery within 3 hours--`
                 )
               }
@@ -880,23 +893,15 @@ const ProductDetails = ({ route }) => {
               </View>
             </TouchableOpacity>
 
-            {/* Return Policy */}
-            {/* <TouchableOpacity
-              style={styles.policyItem}
-              onPress={() =>
-                openCommitmentModal(
-                  "Return Policy",
-                  "You can return items within 15 days of receiving your order."
-                )
-              }
-            >
+            <View style={[styles.policyItem, { marginBottom: 20 }]}>
               <View style={styles.policyRowJustify}>
-                <Text style={styles.policyTitle}>
-                  🔁 Returns within 15 days
-                </Text>
-                <Text style={styles.arrow}>›</Text>
+                <Text style={styles.policyTitle}>💵 Cash on Delivery </Text>
               </View>
-            </TouchableOpacity> */}
+              <Text style={[styles.policyCheck, { paddingTop: 10 }]}>
+                <Text style={{ color: "green" }}>✓</Text> pay in cash when
+                delivered.
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -921,19 +926,62 @@ const ProductDetails = ({ route }) => {
             </View>
           </View>
         </Modal>
-
-        <Text style={styles.descLabel}>Product Details</Text>
-        <TouchableOpacity
-          onPress={() =>
-            openCommitmentModal("Product Details", data.description)
-          }
-        >
-          <View style={styles.policyRowJustify}>
-            <Text style={{ paddingTop: 10, color: "green" }}>
-              Specification ›
-            </Text>
+        <View>
+          <View
+            style={{
+              borderBottomWidth: 2,
+              borderColor: "#eee",
+              paddingBottom: 5,
+              marginBottom: 0,
+            }}
+          >
+            <Text style={styles.descLabel}>Product Details</Text>
           </View>
-        </TouchableOpacity>
+
+          {data.description && (
+            <View style={{ position: "relative", marginTop: 8 }}>
+              {/* 10-line preview */}
+              <Text
+                onTextLayout={onTextLayout}
+                numberOfLines={10}
+                ellipsizeMode="tail"
+                style={[{ lineHeight: 20, color: "#222" }, styles?.descText]}
+              >
+                {data.description}
+              </Text>
+
+              {/* Soft fade at bottom only if truncated */}
+              {isTruncated && (
+                <LinearGradient
+                  colors={["rgba(255,255,255,0)", "rgba(255,255,255,1)"]}
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 40,
+                  }}
+                  pointerEvents="none"
+                />
+              )}
+            </View>
+          )}
+
+          {/* Primary CTA: Specification opens your existing modal */}
+          <TouchableOpacity
+            onPress={() =>
+              openCommitmentModal("Product Details", data.description)
+            }
+            activeOpacity={0.85}
+            style={{ marginTop: 6 }}
+          >
+            <View style={[styles.policyRowJustify, { paddingTop: 0 }]}>
+              <Text style={{ color: "green", fontWeight: "600" }}>
+                More specification ›
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* 🔰 Reviews area */}
         <View style={styles.reviewPreview}>
@@ -1062,36 +1110,26 @@ const ProductDetails = ({ route }) => {
             // ✅ real data: home-এর মতো left/right split
             <View style={styles.masonryContainer}>
               <View style={styles.column}>
-                {recoDisplay
-                  .filter((_, idx) => idx % 2 === 0)
-                  .map((item, index) => (
-                    <View key={`reco_L_${index}`} style={styles.cardWrapper}>
-                      {/* <UserProductCart productData={item} fromDetails={true} /> */}
-
-                      {/* for memory save */}
-
-                      <UserProductCart
-                        productData={item}
-                        fromDetails={true} // থাকুক, pressGuard-ই সব সামলাবে
-                        pressGuard={() => handleRecoPressReplace(item)}
-                      />
-                    </View>
-                  ))}
+                {recoSplit.left.map((item, index) => (
+                  <View key={`reco_L_${index}`} style={styles.cardWrapper}>
+                    <UserProductCart
+                      productData={item}
+                      fromDetails={true}
+                      pressGuard={() => handleRecoPressReplace(item)}
+                    />
+                  </View>
+                ))}
               </View>
               <View style={styles.column}>
-                {recoDisplay
-                  .filter((_, idx) => idx % 2 !== 0)
-                  .map((item, index) => (
-                    <View key={`reco_R_${index}`} style={styles.cardWrapper}>
-                      {/* <UserProductCart productData={item} fromDetails={true} /> */}
-
-                      <UserProductCart
-                        productData={item}
-                        fromDetails={true} // থাকুক, pressGuard-ই সব সামলাবে
-                        pressGuard={() => handleRecoPressReplace(item)}
-                      />
-                    </View>
-                  ))}
+                {recoSplit.right.map((item, index) => (
+                  <View key={`reco_R_${index}`} style={styles.cardWrapper}>
+                    <UserProductCart
+                      productData={item}
+                      fromDetails={true}
+                      pressGuard={() => handleRecoPressReplace(item)}
+                    />
+                  </View>
+                ))}
               </View>
             </View>
           )}
@@ -1125,6 +1163,7 @@ const ProductDetails = ({ route }) => {
         <TouchableOpacity
           style={[styles.cartRowBtn, isAddToCartDisabled() && { opacity: 0.4 }]}
           disabled={isAddToCartDisabled()}
+          pointerEvents={isAddToCartDisabled() ? "none" : "auto"}
           onPress={handleAddToCart}
         >
           <Text style={styles.cartRowText}>
@@ -1184,7 +1223,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
-  sellingPrice: { fontSize: 22, fontWeight: "bold", color: "#222" },
+  sellingPrice: { fontSize: 24, fontWeight: "bold", color: "#222" },
   discount: {
     backgroundColor: "#e53935",
     color: "#fff",
@@ -1262,6 +1301,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flexWrap: "wrap",
     backgroundColor: "#EBEBEB",
+  },
+
+  // add to your stylesheet if you want tighter control
+  descText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#222",
   },
 
   //delivery return style

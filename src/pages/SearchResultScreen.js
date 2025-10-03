@@ -11,7 +11,7 @@ import {
   View
 } from "react-native";
 import SummaryApi from "../common/SummaryApi";
-import SearchBar from "../components/SearchBar";
+import SearchBar, { SupportSheet } from "../components/SearchBar";
 import UserProductCart from "../components/UserProductCart";
 import { sortProductsByUserInterest } from "../helper/sortByUserInterest";
 import { generateOptimizedVariants } from "../helper/variantUtils";
@@ -26,6 +26,7 @@ const SearchResultScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filterPrice, setFilterPrice] = useState(null); // ⏬ eg. 500, 1000
   const [sortedProducts, setSortedProducts] = useState([]);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   useEffect(() => {
     const fetchSearchResults = async () => {
@@ -69,7 +70,7 @@ const SearchResultScreen = () => {
 
   return (
     <View style={styles.container}>
-       <SearchBar />
+        <SearchBar  onOpenSupport={() => setSupportOpen(true)}/>
     <ScrollView
       style={[
         styles.scrollContainer,
@@ -126,6 +127,8 @@ const SearchResultScreen = () => {
         </View>
       )}
     </ScrollView>
+     {/* visible support modal*/}
+          <SupportSheet visible={supportOpen} onClose={() => setSupportOpen(false)} />
     </View>
   );
 };

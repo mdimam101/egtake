@@ -22,11 +22,11 @@ function UserProductCart({
 }) {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get("window").width;
-  const cardWidth = screenWidth * 0.49;
+  const cardWidth = React.useMemo(() => screenWidth * 0.49, [screenWidth]);
 
   const rawImageUrl =
     productData?.img || productData?.variants?.[0]?.images?.[0] || null;
-  const imageUrl = ensureHttps(rawImageUrl);
+  const imageUrl = React.useMemo(() => ensureHttps(rawImageUrl), [rawImageUrl]);
 
   // height resolve না হওয়া পর্যন্ত null, resolve হলে পিক্সেল height
   const [resolvedHeight, setResolvedHeight] = useState(null);
@@ -87,6 +87,9 @@ function UserProductCart({
       style={[styles.card, disabled && { opacity: 0.6 }]}
       onPress={handlePress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={productData?.productName || "Product"}
+      accessibilityState={{ disabled }}
     >
       {resolving ? (
         <View
@@ -94,7 +97,7 @@ function UserProductCart({
             width: "100%",
             height: cardWidth * DEFAULT_RATIO,
             borderRadius: 8,
-            overflow: "hidden", // ✅
+            overflow: "hidden",
             backgroundColor: "#f2f2f2",
             alignItems: "center",
             justifyContent: "center",
@@ -104,7 +107,7 @@ function UserProductCart({
         </View>
       ) : (
         <Image
-          source={imageUrl ? { uri: imageUrl } : undefined}
+          source={imageUrl ? { uri: imageUrl } : undefined}// "../assets/images/EgtakeLogo.png"
           style={{
             width: "100%",
             height: resolvedHeight ?? cardWidth * DEFAULT_RATIO,
@@ -114,7 +117,6 @@ function UserProductCart({
           onError={() => setResolvedHeight(cardWidth * DEFAULT_RATIO)}
         />
       )}
-
       <View style={styles.info}>
         <Text numberOfLines={2} style={styles.name}>
           {productData?.productName}
@@ -124,7 +126,6 @@ function UserProductCart({
           {productData?.selling}
         </Text>
       </View>
-
       {/* চাইলে এখানে news ticker / extra UI যোগ করো */}
     </TouchableOpacity>
   );

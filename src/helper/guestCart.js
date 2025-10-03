@@ -32,7 +32,7 @@ const makeGuestId = (it) => {
  * কিন্তু সেভ করবো এমন শেপে যেন CartPage / CartItem আগের মতোই কাজ করে:
  * - _id (string)
  * - productId: { _id, productName, price, selling }
- * - root: image, size, color, Quantity/quantity, price, selling
+ * - root: image, size, color, quantity/quantity, price, selling
  */
 export const pushGuestCartUnique = async (item) => {
   // normalize করলে compare stable হয়
@@ -85,7 +85,6 @@ export const pushGuestCartUnique = async (item) => {
     color: normColor,
 
     // Qty fields (দুটো রাখছি)
-    Quantity: 1,
     quantity: 1,
 
     // Root pricing (CartItem এ product?.selling * product.quantity)
@@ -128,14 +127,13 @@ export async function guestBumpQty(match, delta) {
 
   if (idx < 0) return { ok: false, reason: 'not_found', items: arr };
 
-  const cur = Number(arr[idx].Quantity ?? arr[idx].quantity ?? 1);
+  const cur = Number( arr[idx].quantity ?? 1);
   const next = cur + Number(delta || 0);
 
   if (next <= 0) {
     arr.splice(idx, 1); // remove item
   } else {
     // keep BOTH fields for UI compatibility
-    arr[idx].Quantity = next;
     arr[idx].quantity = next;
   }
 

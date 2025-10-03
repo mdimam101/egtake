@@ -19,7 +19,7 @@ import ensureHttps from "../common/ensureHttps";
 import SummaryApi from "../common/SummaryApi";
 import BannerSlider from "../components/BannerSlider";
 import CategoryListBar from "../components/CategoryListBar";
-import SearchBar from "../components/SearchBar";
+import SearchBar, { SupportSheet } from "../components/SearchBar";
 import SkeletonCard from "../components/SkeletonCard";
 import SkeletonSlideCard from "../components/SkeletonSlideCard";
 import UserProductCart from "../components/UserProductCart";
@@ -74,6 +74,10 @@ const HomePage = () => {
   const handFromStore = useSelector((s) => s.handCraftState.handCraftList);
   const salesFromStore = useSelector((s) => s.salesState.salesList);
   const dispatch = useDispatch();
+
+  const commonInfo = useSelector((s) => s.commonState.commonInfoList);
+
+  const [supportOpen, setSupportOpen] = useState(false);
 
   // ======= HELPERS: updatedAt compare (order-agnostic, O(n)) =======
   const mapUpdatedAtById = (arr = []) => {
@@ -251,9 +255,9 @@ const HomePage = () => {
   // ============== RUN IT: সবসময়  ==============
   useEffect(() => {
     if (optimizedProducts.length === 0) {
-    fetchAllProducts();
+      fetchAllProducts();
     } else {
-    setLoading(false);
+      setLoading(false);
     }
   }, []);
 
@@ -425,6 +429,14 @@ const HomePage = () => {
       : sortedProducts.slice(0, visibleCount);
   }, [selectedCategory, filteredProducts, sortedProducts, visibleCount]);
 
+  // Memoize left/right split for masonry layout
+  const memoSplit = useMemo(() => {
+    return {
+      left: memoFiltered.filter((_, idx) => idx % 2 === 0),
+      right: memoFiltered.filter((_, idx) => idx % 2 !== 0),
+    };
+  }, [memoFiltered]);
+
   // pagination guard + handler
   const endLock = useRef(false);
   const canLoadMore = visibleCount < totalLength;
@@ -532,7 +544,7 @@ const HomePage = () => {
     }).start();
 
     setPrevCategory(selectedCategory);
-  }, [selectedCategory]);
+  }, [selectedCategory, prevCategory, slideAnim]);
 
   const scrollToTop = () => {
     if (scrollRefforFlatList.current) {
@@ -560,7 +572,7 @@ const HomePage = () => {
   // ============== UI ==============
   return (
     <View style={styles.container}>
-      <SearchBar />
+      <SearchBar onOpenSupport={() => setSupportOpen(true)} />
 
       {selectedCategory === "_trending" ||
       selectedCategory === "_below99" ||
@@ -588,8 +600,8 @@ const HomePage = () => {
       {selectedCategory ? (
         <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
           <FlatList
-            key={`cat-${selectedCategory}-${catListKey}`} // ✅ remount per category
-            ref={catListRef} // ✅ scroll control
+            key={`cat-${selectedCategory}-${catListKey}`}
+            ref={catListRef}
             data={[1]}
             keyExtractor={(_, index) => "masonry_" + index}
             initialNumToRender={10}
@@ -603,37 +615,32 @@ const HomePage = () => {
             renderItem={() => (
               <View style={styles.masonryContainerForCategory}>
                 <View style={[styles.column, { paddingRight: 2 }]}>
-                  {memoFiltered
-                    .filter((_, idx) => idx % 2 === 0)
-                    .map((item, index) => (
-                      <View
-                        key={(item.cardKey || item._id) + "_L" + index}
-                        style={styles.cardWrapper}
-                      >
-                        <UserProductCart
-                          productData={item}
-                          disabled={!!pressedIds[item._id]}
-                          pressGuard={pressGuard}
-                        />
-                      </View>
-                    ))}
+                  {memoSplit.left.map((item, index) => (
+                    <View
+                      key={(item.cardKey || item._id) + "_L" + index}
+                      style={styles.cardWrapper}
+                    >
+                      <UserProductCart
+                        productData={item}
+                        disabled={!!pressedIds[item._id]}
+                        pressGuard={pressGuard}
+                      />
+                    </View>
+                  ))}
                 </View>
-
                 <View style={[styles.column, { paddingLeft: 2 }]}>
-                  {memoFiltered
-                    .filter((_, idx) => idx % 2 !== 0)
-                    .map((item, index) => (
-                      <View
-                        key={(item.cardKey || item._id) + "_R" + index}
-                        style={styles.cardWrapper}
-                      >
-                        <UserProductCart
-                          productData={item}
-                          disabled={!!pressedIds[item._id]}
-                          pressGuard={pressGuard}
-                        />
-                      </View>
-                    ))}
+                  {memoSplit.right.map((item, index) => (
+                    <View
+                      key={(item.cardKey || item._id) + "_R" + index}
+                      style={styles.cardWrapper}
+                    >
+                      <UserProductCart
+                        productData={item}
+                        disabled={!!pressedIds[item._id]}
+                        pressGuard={pressGuard}
+                      />
+                    </View>
+                  ))}
                 </View>
               </View>
             )}
@@ -669,7 +676,7 @@ const HomePage = () => {
                 <BannerSlider />
 
                 {/* 💥 Sales — only if displaySalesSlied === true (no timer) */}
-                {false && (
+                {commonInfo[0]?.isDisplaySalesSlied && (
                   <>
                     <LinearGradient
                       colors={["#E8F0FF", "#FFFFFF"]}
@@ -691,15 +698,19 @@ const HomePage = () => {
                 {renderSlide("tranding")}
 
                 {/* 🧵 Hand craft */}
-                <LinearGradient
-                  colors={["#F8FFB3", "#FDFFE2"]}
-                  style={styles.commitHeaderWrapper}
-                >
-                  <Text style={styles.commitHeaderText}>
-                    🧵 Hand craft (হস্ত শিল্প)
-                  </Text>
-                </LinearGradient>
-                {renderSlide("handCraft")}
+                {commonInfo[0]?.isDisplayHandCraftSlied && (
+                  <>
+                    <LinearGradient
+                      colors={["#F8FFB3", "#FDFFE2"]}
+                      style={styles.commitHeaderWrapper}
+                    >
+                      <Text style={styles.commitHeaderText}>
+                        🧵 Hand craft (হস্ত শিল্প)
+                      </Text>
+                    </LinearGradient>
+                    {renderSlide("handCraft")}
+                  </>
+                )}
 
                 {/* 💸 0~99 */}
                 <LinearGradient
@@ -728,20 +739,18 @@ const HomePage = () => {
                               <SkeletonCard />
                             </View>
                           ))
-                      : memoFiltered
-                          .filter((_, idx) => idx % 2 === 0)
-                          .map((item, index) => (
-                            <View
-                              key={(item.cardKey || item._id) + "_L" + index}
-                              style={styles.cardWrapper}
-                            >
-                              <UserProductCart
-                                productData={item}
-                                disabled={!!pressedIds[item._id]}
-                                pressGuard={pressGuard}
-                              />
-                            </View>
-                          ))}
+                      : memoSplit.left.map((item, index) => (
+                          <View
+                            key={(item.cardKey || item._id) + "_L" + index}
+                            style={styles.cardWrapper}
+                          >
+                            <UserProductCart
+                              productData={item}
+                              disabled={!!pressedIds[item._id]}
+                              pressGuard={pressGuard}
+                            />
+                          </View>
+                        ))}
                   </View>
 
                   <View style={styles.column}>
@@ -753,20 +762,18 @@ const HomePage = () => {
                               <SkeletonCard />
                             </View>
                           ))
-                      : memoFiltered
-                          .filter((_, idx) => idx % 2 !== 0)
-                          .map((item, index) => (
-                            <View
-                              key={(item.cardKey || item._id) + "_R" + index}
-                              style={styles.cardWrapper}
-                            >
-                              <UserProductCart
-                                productData={item}
-                                disabled={!!pressedIds[item._id]}
-                                pressGuard={pressGuard}
-                              />
-                            </View>
-                          ))}
+                      : memoSplit.right.map((item, index) => (
+                          <View
+                            key={(item.cardKey || item._id) + "_R" + index}
+                            style={styles.cardWrapper}
+                          >
+                            <UserProductCart
+                              productData={item}
+                              disabled={!!pressedIds[item._id]}
+                              pressGuard={pressGuard}
+                            />
+                          </View>
+                        ))}
                   </View>
                 </View>
               </View>
@@ -786,6 +793,10 @@ const HomePage = () => {
           />
         </Animated.View>
       )}
+      <SupportSheet
+        visible={supportOpen}
+        onClose={() => setSupportOpen(false)}
+      />
     </View>
   );
 };
@@ -830,7 +841,7 @@ const styles = StyleSheet.create({
   masonryContainer: { flex: 1, flexDirection: "column" },
   masonryContainerForCategory: {
     flexDirection: "row",
-    justifyContent: "space_between",
+    justifyContent: "space-between",
     flexWrap: "wrap",
   },
   cardWrapper: { marginBottom: 4 },
