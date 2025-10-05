@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 8,
     margin: 0,
-    padding: 0,
+    paddingBottom: 8,
   },
   info: {
     marginTop: 8,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   price: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "bold",
     color: "#e91e63",
   },

@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingRight: 40,
     backgroundColor: "#fff",
-    width: 340,
+    width: '88%',
   },
   input: {
     flex: 1,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     //  gap: 4,
-    height: 31,
+    height: 32.4,
     paddingHorizontal: 4,
     borderRadius: 60,
     backgroundColor: "green",
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     //  bottom:35,
 
     marginRight: 10,
-    marginLeft: 3,
+    marginLeft: 5,
     marginTop: 3,
   },
 

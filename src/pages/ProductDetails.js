@@ -98,6 +98,7 @@ const ProductDetails = ({ route }) => {
 
   const [data, setData] = useState({
     productName: "",
+    productCodeNumber: "",
     brandName: "",
     category: "",
     subCategory: "",
@@ -105,6 +106,7 @@ const ProductDetails = ({ route }) => {
     description: "",
     price: 0,
     selling: 0,
+    sizeDetails: [],
   });
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -319,7 +321,15 @@ const ProductDetails = ({ route }) => {
     isNumberType = isNumeric(data.variants[0]?.sizes[0]?.size);
   }
 
-  const SelectTSizeType = isNumberType ? SIZE_TYPE_NUMBER : SIZE_TYPE_LETTER;
+  // const SelectTSizeType = isNumberType ? SIZE_TYPE_NUMBER : SIZE_TYPE_LETTER;
+// sizeDetails থেকে শুধু size গুলো
+const sizesList = Array.from(
+  new Set( // (optional) ডুপ্লিকেট থাকলে কেটে দেবে
+    (data?.sizeDetails || [])
+      .map(x => String(x.size).trim())
+      .filter(Boolean)
+  )
+);  
 
   const getStockBySize = (size) => {
     const sizeObjWithStk = variantSizes.find((s) => s.size === size);
@@ -421,11 +431,7 @@ const ProductDetails = ({ route }) => {
     return () => clearTimeout(t);
   }, [data?._id]); // 👈 শুধু ID বদলালেই effect চলবে
 
-  const selectedVariantDetails = selectedVariant.sizes || [
-    { size: "S", stock: 5, length: 32, chest: 38, sleeve: 22 },
-    { size: "M", stock: 3, length: 33, chest: 40, sleeve: 23 },
-    { size: "L", stock: 0, length: 34, chest: 42, sleeve: 24 },
-  ];
+  const selectedVariantDetails = data?.sizeDetails || [];
 
   const handleWhatsChat = () => {
     handleWhatsApp(data);
@@ -533,6 +539,19 @@ const ProductDetails = ({ route }) => {
     // If more than 10 lines, show fade + keep CTA
     if (lines > 10) setIsTruncated(true);
   }, []);
+
+  // product description normalizeNewline
+  const normalizeNewlinesServer = (s = "") => {
+    return String(s)
+      .replace(/\r\n?|\u000d/g, "\n")
+      .replace(/\\n/g, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .trim();
+  };
+
+  // Controller উদাহরণ
+  const desc = normalizeNewlinesServer(data.description);
+  data.description = desc;
 
   return (
     <View style={{ flex: 1 }}>
@@ -726,7 +745,7 @@ const ProductDetails = ({ route }) => {
           <>
             <Text style={styles.sizeLabel}>Select Size</Text>
             <View style={styles.sizeOptions}>
-              {SelectTSizeType.map((size) => {
+              {sizesList.map((size) => {
                 const stock = getStockBySize(size);
                 const disabled = stock === 0;
                 return (
@@ -926,6 +945,10 @@ const ProductDetails = ({ route }) => {
             </View>
           </View>
         </Modal>
+
+        <Text style={{ paddingTop: 10 }}>
+          Code number : {data?.productCodeNumber}
+        </Text>
         <View>
           <View
             style={{
