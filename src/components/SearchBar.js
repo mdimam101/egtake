@@ -23,7 +23,7 @@ const PLACEHOLDER_COLOR = "#999";
 
 // ---- Support config
 
-const WHATSAPP_MSG = "Hi EgTake";
+const WHATSAPP_MSG = "Hi EGtake";
 
 async function openWhats(phone, message = WHATSAPP_MSG) {
   try {

@@ -5,7 +5,7 @@ import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react
 const AREA = [
   { label: 'Dhaka', value: 'Dhaka' },
    { label: 'Narayanganj', value: 'Narayanganj' },
-  { label: 'Others', value: 'Others' },
+  { label: 'Others Area', value: 'Others' },
 ];
 
 const CustomDropdown = ({ selected, onSelect }) => {

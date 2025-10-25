@@ -32,9 +32,9 @@ import Context from "../context";
 import { setUserDetails } from "../store/userSlice";
 
 // 🆕 Support config (replace with your real numbers)
-const SUPPORT_PHONE = "+8801712345678";
-const WHATSAPP_PHONE = "+817045439721";
-const WHATSAPP_MSG = "Hi EgTake";
+// const SUPPORT_PHONE = "+8801712345678";
+// const WHATSAPP_PHONE = "+817045439721";
+const WHATSAPP_MSG = "Hi EGtake";
 
 // ---------- Status constants ----------
 const ORDER_STATUS = {
@@ -331,7 +331,7 @@ const SupportRow = ({ icon, title, subtitle, onPress, right }) => (
 );
 
 // 🆕 Support bottom sheet
-const SupportSheet = ({ visible, onClose }) => (
+const SupportSheet = ({ visible,supportPhone,whatsAppPhn, onClose }) => (
   <Modal
     visible={visible}
     transparent
@@ -356,22 +356,22 @@ const SupportSheet = ({ visible, onClose }) => (
           <SupportRow
             icon="call-outline"
             title="Call Support"
-            subtitle={SUPPORT_PHONE}
-            onPress={() => openDialer(SUPPORT_PHONE)}
+            subtitle={supportPhone}
+            onPress={() => openDialer(supportPhone)}
             right={<Ionicons name="call-outline" size={18} color="#1976d2" />}
           />
           <View style={styles.sheetDivider} />
           <SupportRow
             icon="logo-whatsapp"
             title="WhatsApp Chat"
-            subtitle={WHATSAPP_PHONE}
-            onPress={() => openWhats(WHATSAPP_PHONE)}
+            subtitle={whatsAppPhn}
+            onPress={() => openWhats(whatsAppPhn)}
             right={<Ionicons name="logo-whatsapp" size={18} color="#25D366" />}
           />
         </View>
 
         <Text style={styles.supportNote}>
-          Our support is available 09:00–21:00 (GMT+6).
+          Our support is available 08:00–21:00 (GMT+6).
         </Text>
       </View>
     </View>
@@ -595,6 +595,10 @@ const ProfilePage = () => {
 
   // ✅ Ask-before-cancel modal state (null = closed)
   const [cancelAskId, setCancelAskId] = useState(null);
+
+  const commonInfo = useSelector((s) => s.commonState.commonInfoList);
+    const SUPPORT_PHONE = commonInfo[0]?.whatsAppNumber;
+    const WHATSAPP_PHONE = commonInfo[0]?.supportCallNumber;
 
   // Fetch Orders
   const fetchUserOrders = useCallback(async () => {
@@ -1210,6 +1214,8 @@ const ProfilePage = () => {
       {/* 🆕 Support Sheet */}
       <SupportSheet
         visible={supportOpen}
+        supportPhone =  {SUPPORT_PHONE}
+        whatsAppPhn = {WHATSAPP_PHONE}
         onClose={() => setSupportOpen(false)}
       />
 

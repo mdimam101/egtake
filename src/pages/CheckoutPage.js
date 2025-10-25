@@ -5,6 +5,7 @@ import axios from "axios";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,6 +28,9 @@ import updateProductStock from "../helper/updateProductStock";
 
 const PLACEHOLDER_COLOR = "#999";
 
+// payment gat way server coast etc
+const PROCESSING_FEE = 5;
+
 const CheckoutPage = () => {
   const navigation = useNavigation();
   const { fetchUserAddToCart } = useContext(Context);
@@ -43,11 +47,22 @@ const CheckoutPage = () => {
   const submitLockRef = useRef(false); // extra guard against rapid taps
   const user = useSelector((state) => state?.userState?.user);
 
-  const commonInfo = useSelector((s) => s.commonState.commonInfoList)
+  const commonInfo = useSelector((s) => s.commonState.commonInfoList);
 
-  const MIN_FREE_NAR = commonInfo[0]?.nrGanjMiniOrdr;   // ✅ Narayanganj
-  const MIN_FREE_DHK = commonInfo[0]?.DhakaMiniOrdr;   // ✅ Dhaka
-  const MIN_FREE_OTH = commonInfo[0]?.OthersAreaMiniOrdr;  // ✅ Others
+  const MIN_FREE_NAR = commonInfo[0]?.nrGanjMiniOrdr
+    ? Number(commonInfo[0]?.nrGanjMiniOrdr)
+    : 599; // ✅ Narayanganj
+  const MIN_FREE_DHK = commonInfo[0]?.DhakaMiniOrdr
+    ? Number(commonInfo[0]?.DhakaMiniOrdr)
+    : 1190; // ✅ Dhaka
+  const MIN_FREE_OTH = commonInfo[0]?.OthersAreaMiniOrdr
+    ? Number(commonInfo[0]?.OthersAreaMiniOrdr)
+    : 1500; // ✅ Others
+
+  // packing werehous etc coast
+  const handlingCharge = commonInfo[0]?.handlingCharge
+    ? Number(commonInfo[0]?.handlingCharge)
+    : 15; // ✅ Others
 
   // ✅ shipping form
   const [formData, setFormData] = useState({
@@ -93,9 +108,6 @@ const CheckoutPage = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // ===== Pricing logic =====
-  const processingFee = 1;
-
   // district base charges (unchanged)
   const districtCharge = (district) => {
     if (district === "Narayanganj") return 0;
@@ -114,13 +126,14 @@ const CheckoutPage = () => {
   // ✅ Free threshold helpers (all districts)
   const getFreeThreshold = (district) => {
     if (district === "Narayanganj") return MIN_FREE_NAR; // 499
-    if (district === "Dhaka") return MIN_FREE_DHK;       // 999
-    if (district === "Others") return MIN_FREE_OTH;      // 1500
+    if (district === "Dhaka") return MIN_FREE_DHK; // 999
+    if (district === "Others") return MIN_FREE_OTH; // 1500
     return Infinity;
   };
 
-  const freeEligible =
-    formData.district ? baseTotal >= getFreeThreshold(formData.district) : true;
+  const freeEligible = formData.district
+    ? baseTotal >= getFreeThreshold(formData.district)
+    : true;
 
   const freeDisabled = !!formData.district && !freeEligible;
 
@@ -196,19 +209,15 @@ const CheckoutPage = () => {
     deliveryOption
   );
 
-  const handlingCharge = useMemo(() => {
+  /*const handlingCharge = useMemo(() => {
     if (formData.district === "Narayanganj" && baseTotal < 200) {
       return 19;
     }
     return 9;
-  }, [formData.district, baseTotal]);
+  }, [formData.district, baseTotal]);*/
 
   const Subtotal =
-    baseTotal +
-    deliveryCharge +
-    handlingCharge +
-    processingFee -
-    discount;
+    baseTotal + deliveryCharge + handlingCharge + PROCESSING_FEE - discount;
 
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -263,15 +272,19 @@ const CheckoutPage = () => {
   };
 
   // Memoize selectedItems mapping for order payload
-  const orderPayloadItems = useMemo(() => selectedItems.map((item) => ({
-    productId: item.productId._id,
-    productName: item.productId.productName,
-    quantity: item.quantity,
-    price: (item?.productId?.selling || 0) * item.quantity,
-    size: item.size,
-    color: item.color,
-    image: item.image,
-  })), [selectedItems]);
+  const orderPayloadItems = useMemo(
+    () =>
+      selectedItems.map((item) => ({
+        productId: item.productId._id,
+        productName: item.productId.productName,
+        quantity: item.quantity,
+        price: (item?.productId?.selling || 0) * item.quantity,
+        size: item.size,
+        color: item.color,
+        image: item.image,
+      })),
+    [selectedItems]
+  );
 
   const handleSubmitOrder = async () => {
     if (!user?._id) {
@@ -285,6 +298,9 @@ const CheckoutPage = () => {
     if (!phone) newErrors.phone = "Phone number is required";
     if (!district) newErrors.district = "Please select your district";
     if (!address) newErrors.address = "Full address is required";
+    if (!name || !phone || !district || !address) {
+      Alert.alert("Please fillup shipping details");
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -346,7 +362,7 @@ const CheckoutPage = () => {
         }
 
         setModalVisible(true);
-         // যেখানে order confirm success হয়:
+        // যেখানে order confirm success হয়:
         await clearGuestCart(); // ✅ guest cart মুছে যাবে
         await handleRemove(idArray);
         setModalVisible(true);
@@ -379,7 +395,7 @@ const CheckoutPage = () => {
   const deliveryLabelValue =
     deliveryCharge === 0 ? "FREE" : `৳${deliveryCharge}`;
 
-    // ✅ FREE কার্ডের জন্য আলাদা লেবেল: সবসময় FREE দেখাবে
+  // ✅ FREE কার্ডের জন্য আলাদা লেবেল: সবসময় FREE দেখাবে
   const freeCardPriceLabel = "FREE";
 
   return (
@@ -525,7 +541,6 @@ const CheckoutPage = () => {
               </View>
               <Text style={styles.optionPrice}>{freeCardPriceLabel}</Text>
 
-
               {/* small lock badge when locked */}
               {freeDisabled && (
                 <View style={styles.lockBadge}>
@@ -628,7 +643,9 @@ const CheckoutPage = () => {
                     Delivery time within 48 hours
                   </Text>
                 </View>
-                <Text style={styles.optionPrice}>৳{districtCharge("Dhaka")}</Text>
+                <Text style={styles.optionPrice}>
+                  ৳{districtCharge("Dhaka")}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -777,8 +794,8 @@ const CheckoutPage = () => {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
-              <Text style={styles.oldAmount}>৳5</Text>
-              <Text style={styles.amountText}>৳{processingFee}</Text>
+              <Text style={styles.oldAmount}>৳9</Text>
+              <Text style={styles.amountText}>৳{PROCESSING_FEE}</Text>
             </View>
           </View>
 
@@ -812,12 +829,12 @@ const CheckoutPage = () => {
         }}
       >
         <TouchableOpacity
-          style={[styles.orderBtn, isSubmitting && styles.orderBtnDisabled]}
+          style={[styles.orderBtn]} //, isSubmitting && styles.orderBtnDisabled
           onPress={handleSubmitOrder}
-          disabled={isSubmitting || !formData.name || !formData.phone || !formData.address || !formData.district}
+          //disabled={isSubmitting || !formData.name || !formData.phone || !formData.address || !formData.district}
           activeOpacity={isSubmitting ? 1 : 0.7}
           accessibilityRole="button"
-          accessibilityState={{ disabled: isSubmitting || !formData.name || !formData.phone || !formData.address || !formData.district }}
+          //accessibilityState={{ disabled: isSubmitting || !formData.name || !formData.phone || !formData.address || !formData.district }}
         >
           {isSubmitting ? (
             <View

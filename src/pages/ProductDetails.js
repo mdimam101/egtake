@@ -45,6 +45,8 @@ import { trackBasic } from "../helper/trackBasic";
 import { Image as ExpoImage } from "expo-image";
 
 import { CommonActions } from "@react-navigation/native";
+import BenefitsBar from "../components/BenefitsBar";
+import ProductQualityViz from "../components/ProductQualityBlock";
 
 const ROLLING_LIMIT = 3;
 
@@ -63,23 +65,6 @@ const Stars = ({ value = 0, size = 14 }) => (
 );
 
 const { width: screenWidth } = Dimensions.get("window");
-const SIZE_TYPE_LETTER = ["S", "M", "L", "XL", "XXL"];
-const SIZE_TYPE_NUMBER = [
-  "22",
-  "24",
-  "26",
-  "28",
-  "30",
-  "32",
-  "34",
-  "36",
-  "38",
-  "40",
-  "42",
-  "44",
-  "46",
-  "48",
-];
 
 const getPrimaryImage = (item) =>
   ensureHttps(item?.img || item?.variants?.[0]?.images?.[0] || "");
@@ -107,6 +92,7 @@ const ProductDetails = ({ route }) => {
     price: 0,
     selling: 0,
     sizeDetails: [],
+    qualityType: "",
   });
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -313,23 +299,14 @@ const ProductDetails = ({ route }) => {
   const variantSizes = selectedVariant.sizes || [];
   const isSizeAvailable = variantSizes.some((s) => s.size?.trim());
 
-  let isNumberType = false;
-  // check Size tyep(Number Or Letter)
-  if (data.variants.length > 1) {
-    const isNumeric = (v) =>
-      v?.toString().trim() !== "" && Number.isFinite(Number(v));
-    isNumberType = isNumeric(data.variants[0]?.sizes[0]?.size);
-  }
-
-  // const SelectTSizeType = isNumberType ? SIZE_TYPE_NUMBER : SIZE_TYPE_LETTER;
-// sizeDetails থেকে শুধু size গুলো
-const sizesList = Array.from(
-  new Set( // (optional) ডুপ্লিকেট থাকলে কেটে দেবে
-    (data?.sizeDetails || [])
-      .map(x => String(x.size).trim())
-      .filter(Boolean)
-  )
-);  
+  // sizeDetails থেকে শুধু size গুলো
+  const sizesList = Array.from(
+    new Set( // (optional) ডুপ্লিকেট থাকলে কেটে দেবে
+      (data?.sizeDetails || [])
+        .map((x) => String(x.size).trim())
+        .filter(Boolean)
+    )
+  );
 
   const getStockBySize = (size) => {
     const sizeObjWithStk = variantSizes.find((s) => s.size === size);
@@ -361,9 +338,9 @@ const sizesList = Array.from(
     if (isSizeAvailable && !selectedSize) {
       Alert.alert("Please select a size.");
       return;
-    } else if (isColorAvailable && data.variants.length < 1) {
-      Alert.alert("Please select a color.");
-      return;
+    // } else if (isColorAvailable && data.variants?.length < 1) {
+    //   Alert.alert("Please select a color.");
+    //   return;
     }
 
     const payload = {
@@ -550,7 +527,7 @@ const sizesList = Array.from(
   };
 
   // Controller উদাহরণ
-  const desc = normalizeNewlinesServer(data.description);
+  const desc = normalizeNewlinesServer(data?.description);
   data.description = desc;
 
   return (
@@ -648,9 +625,9 @@ const sizesList = Array.from(
           </Text>
         </View>
 
-        {data.variants.length > 1 && (
+        {data.variants?.length > 1 && (
           <Text style={styles.variantCounter}>
-            Variant {selectedVariantIndex + 1}/{data.variants.length}
+            Variant {selectedVariantIndex + 1}/{data.variants?.length}
           </Text>
         )}
 
@@ -684,17 +661,17 @@ const sizesList = Array.from(
           </TouchableOpacity>
         )}
 
-        {selectedVariant.color && data.variants.length > 1 && (
+        {selectedVariant.color && data.variants?.length > 1 && (
           <Text style={styles.colorInfo}>Color: {selectedVariant.color}</Text>
         )}
 
-        {data.variants.length > 1 && (
+        {data.variants?.length > 1 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.thumbnailRow}
           >
-            {data.variants.map((variant, idx) => {
+            {data.variants?.map((variant, idx) => {
               const thumbImage = variant.images?.[0];
               return (
                 <TouchableOpacity
@@ -795,13 +772,18 @@ const sizesList = Array.from(
           </View>
         )}
 
+        {/* // Suppose API returns PQualityType in data.qualityType  (normal|good|premium|luxury) */}
+        {data.qualityType && (
+          <ProductQualityViz PQualityType={data.qualityType} style={{ marginTop: 12 }} />
+        )}
+
         <View>
           <View style={styles.commitHeaderWrapper}>
             <LinearGradient
               colors={["#FFF39C", "#fffce5"]} // উপরে গাঢ়, নিচে হালকা
               style={styles.commitHeaderWrapper}
             >
-              <Text style={styles.commitHeaderText}>EgTake Commitment</Text>
+              <Text style={styles.commitHeaderText}>EGtake Commitment</Text>
             </LinearGradient>
           </View>
 
@@ -873,7 +855,7 @@ const sizesList = Array.from(
 
             {/*🛡️ Free Returns Commitment */}
             <TouchableOpacity
-              style={styles.policyItem}
+              style={[styles.policyItem, { marginBottom: 0 }]}
               onPress={() =>
                 openCommitmentModal(
                   "Free Return Commitment",
@@ -912,7 +894,7 @@ const sizesList = Array.from(
               </View>
             </TouchableOpacity>
 
-            <View style={[styles.policyItem, { marginBottom: 20 }]}>
+            {/* <View style={[styles.policyItem, { marginBottom: 20 }]}>
               <View style={styles.policyRowJustify}>
                 <Text style={styles.policyTitle}>💵 Cash on Delivery </Text>
               </View>
@@ -920,9 +902,16 @@ const sizesList = Array.from(
                 <Text style={{ color: "green" }}>✓</Text> pay in cash when
                 delivered.
               </Text>
-            </View>
+            </View> */}
           </View>
         </View>
+
+        <BenefitsBar
+          style={{ marginTop: 10 }}
+          // onPressCOD={() => openCommitmentModal("Cash On Delivery", "Pay in cash when your order arrives.")}
+          // onPressReturn={() => openCommitmentModal("7 Days Happy Return", "Return within 7 days in original condition.")}
+          // onPressPoints={() => openCommitmentModal("EGTAKE Points", "Earn points on every purchase and redeem later.")}
+        />
 
         <Modal
           visible={modalVisible}
@@ -946,7 +935,7 @@ const sizesList = Array.from(
           </View>
         </Modal>
 
-        <Text style={{ paddingTop: 10 }}>
+        <Text style={{ paddingTop: 15 }}>
           Code number : {data?.productCodeNumber}
         </Text>
         <View>
@@ -954,14 +943,14 @@ const sizesList = Array.from(
             style={{
               borderBottomWidth: 2,
               borderColor: "#eee",
-              paddingBottom: 5,
+              paddingBottom: 0,
               marginBottom: 0,
             }}
           >
             <Text style={styles.descLabel}>Product Details</Text>
           </View>
 
-          {data.description && (
+          {data?.description && (
             <View style={{ position: "relative", marginTop: 8 }}>
               {/* 10-line preview */}
               <Text
@@ -993,12 +982,17 @@ const sizesList = Array.from(
           {/* Primary CTA: Specification opens your existing modal */}
           <TouchableOpacity
             onPress={() =>
-              openCommitmentModal("Product Details", data.description)
+              openCommitmentModal("Product Details", data?.description)
             }
             activeOpacity={0.85}
             style={{ marginTop: 6 }}
           >
-            <View style={[styles.policyRowJustify, { paddingTop: 0 }]}>
+            <View
+              style={[
+                styles.policyRowJustify,
+                { paddingTop: 5, marginBottom: 10 },
+              ]}
+            >
               <Text style={{ color: "green", fontWeight: "600" }}>
                 More specification ›
               </Text>
@@ -1303,7 +1297,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 
-  descLabel: { fontSize: 16, fontWeight: "600", marginTop: 20 },
+  descLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 20,
+    paddingBottom: 10,
+  },
   description: { fontSize: 14, marginTop: 8, color: "#555" },
   addToCartWrapper: { marginTop: 24, marginBottom: 40 },
   fixedAddToCartWrapper: {

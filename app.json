@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "EgTake",
+    "name": "EGtake",
     "slug": "test-eas-upload",
-    "version": "3.0.0",
+    "version": "4.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/EgtakeLogo.png",
     "scheme": "testeasupload",
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/EgtakeLogo.png",
+        "foregroundImage": "./assets/images/egtakeIcon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

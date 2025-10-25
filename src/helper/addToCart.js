@@ -19,7 +19,7 @@ const addToCart = async ({ productId, size, color, image, price, selling }) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      withCredentials: true, // Send cookies for auth
+      //withCredentials: true, // Send cookies for auth
       data: { productId, size, color, image, price, selling },
     });
 

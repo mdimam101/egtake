@@ -510,7 +510,7 @@ const SignupPage = () => {
       >
         {/* Brand Header */}
         <View style={styles.headerWrap}>
-          <Text style={styles.brand}>EgTake</Text>
+          <Text style={styles.brand}>EGtake</Text>
           <Text style={styles.tagline}>Shop with confidence</Text>
         </View>
 
