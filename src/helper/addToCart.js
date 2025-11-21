@@ -10,7 +10,7 @@ const showToast = (message) => {
   }
 };
 
-const addToCart = async ({ productId, size, color, image, price, selling }) => {
+const addToCart = async ({ productId,productName, size, color, image, price, selling, productCodeNumber }) => {
   
   try {
     const response = await axios({
@@ -20,7 +20,7 @@ const addToCart = async ({ productId, size, color, image, price, selling }) => {
         'Content-Type': 'application/json',
       },
       //withCredentials: true, // Send cookies for auth
-      data: { productId, size, color, image, price, selling },
+      data: { productId,productName, size, color, image, price, selling, productCodeNumber },
     });
 
     const result = response.data;

@@ -266,6 +266,7 @@ const ProductDetails = ({ route }) => {
 
         if (res.data.success) {
           const fresh = res.data.data;
+          console.log("🦌◆🦌◆details", fresh);
 
           if (!isEqual(fresh, cached)) {
             hydrateUI(fresh); // only if changed
@@ -313,9 +314,20 @@ const ProductDetails = ({ route }) => {
     return sizeObjWithStk ? sizeObjWithStk.stock : 0;
   };
 
+  // check in variant (productName/price/selling) if have it will be update
+  let updateProductName = selectedVariant?.SpcProductName
+    ? selectedVariant.SpcProductName
+    : data.productName;
+  let updateSelling = selectedVariant?.SpcSelling
+    ? selectedVariant.SpcSelling
+    : data.selling;
+  let UpdatePrice = selectedVariant?.SpcPrice
+    ? selectedVariant.SpcPrice
+    : data.price;
+
   const discount =
-    data.price && data.selling
-      ? Math.floor(((data.price - data.selling) / data.price) * 100)
+    UpdatePrice && updateSelling
+      ? Math.floor(((UpdatePrice - updateSelling) / UpdatePrice) * 100)
       : 0;
 
   const totalStock = variantSizes.reduce((sum, s) => sum + s.stock, 0);
@@ -338,19 +350,20 @@ const ProductDetails = ({ route }) => {
     if (isSizeAvailable && !selectedSize) {
       Alert.alert("Please select a size.");
       return;
-    // } else if (isColorAvailable && data.variants?.length < 1) {
-    //   Alert.alert("Please select a color.");
-    //   return;
+      // } else if (isColorAvailable && data.variants?.length < 1) {
+      //   Alert.alert("Please select a color.");
+      //   return;
     }
 
     const payload = {
       productId: data._id,
-      productName: data.productName,
+      productName: updateProductName,
       size: isSizeAvailable ? selectedSize : "",
       color: isColorAvailable ? selectedVariant?.color : "",
       image: (selectedImg || "").replace("https://", "http://"),
-      price: data.price,
-      selling: data.selling,
+      price: UpdatePrice,
+      selling: updateSelling,
+      productCodeNumber: data.productCodeNumber,
     };
 
     // ✅ Not logged in → guest cart (duplicate block)
@@ -530,6 +543,17 @@ const ProductDetails = ({ route }) => {
   const desc = normalizeNewlinesServer(data?.description);
   data.description = desc;
 
+  const productQA = [
+    {
+      question: "product er color thakbe ki?",
+      answer: "Yes 100%",
+    },
+    {
+      question: "aita ki shuti",
+      answer: "Yes soft kapor",
+    },
+  ];
+
   return (
     <View style={{ flex: 1 }}>
       {/* ✅ Back Button fixed top-left */}
@@ -632,14 +656,13 @@ const ProductDetails = ({ route }) => {
         )}
 
         <View style={styles.priceContainer}>
-          <Text style={styles.sellingPrice}>৳{data.selling}</Text>
+          <Text style={styles.sellingPrice}>৳{updateSelling}</Text>
           {discount > 0 && (
             <Text style={styles.discount}>Save {discount}%</Text>
           )}
-          <Text style={styles.originalPrice}>৳{data.price}</Text>
+          <Text style={styles.originalPrice}>৳{UpdatePrice}</Text>
         </View>
-
-        <Text style={styles.productName}>{data.productName}</Text>
+        <Text style={styles.productName}>{updateProductName}</Text>
 
         {/* ⭐ Short average review chip */}
         {reviewCount > 0 && (
@@ -774,20 +797,22 @@ const ProductDetails = ({ route }) => {
 
         {/* // Suppose API returns PQualityType in data.qualityType  (normal|good|premium|luxury) */}
         {data.qualityType && (
-          <ProductQualityViz PQualityType={data.qualityType} style={{ marginTop: 12 }} />
+          <ProductQualityViz
+            PQualityType={data.qualityType}
+            style={{ marginTop: 12 }}
+          />
         )}
 
         <View>
-          <View style={styles.commitHeaderWrapper}>
-            <LinearGradient
-              colors={["#FFF39C", "#fffce5"]} // উপরে গাঢ়, নিচে হালকা
+          <View style={styles.commitHeaderWrapper}></View>
+
+          <View style={styles.policyCard}>
+             <LinearGradient
+              colors={["#FFF39C", "#fdfdfdff"]} // উপরে গাঢ়, নিচে হালকা
               style={styles.commitHeaderWrapper}
             >
               <Text style={styles.commitHeaderText}>EGtake Commitment</Text>
             </LinearGradient>
-          </View>
-
-          <View style={styles.policyCard}>
             {/* Shipping */}
             <TouchableOpacity
               style={styles.policyItem}
@@ -821,7 +846,7 @@ const ProductDetails = ({ route }) => {
               onPress={() =>
                 openCommitmentModal(
                   "Delivery Commitment",
-                  `✓ 150円 coupon code if delayed\n✓ Refund if items damaged\n✓ Refund if package lost\n✓ Refund if no delivery`
+                  `✓ 100円 coupon code if delayed\n✓ Refund if items damaged\n✓ Refund if package lost\n✓ Refund if no delivery`
                 )
               }
             >
@@ -832,7 +857,7 @@ const ProductDetails = ({ route }) => {
                 </View>
                 <View style={styles.policyRow}>
                   <Text style={styles.policyCheck}>
-                    <Text style={{ color: "green" }}>✓</Text> ৳150 coupon code
+                    <Text style={{ color: "green" }}>✓</Text> ৳100 coupon code
                     if delayed
                   </Text>
                   <Text style={styles.policyCheck}>
@@ -893,19 +918,10 @@ const ProductDetails = ({ route }) => {
                 </View>
               </View>
             </TouchableOpacity>
-
-            {/* <View style={[styles.policyItem, { marginBottom: 20 }]}>
-              <View style={styles.policyRowJustify}>
-                <Text style={styles.policyTitle}>💵 Cash on Delivery </Text>
-              </View>
-              <Text style={[styles.policyCheck, { paddingTop: 10 }]}>
-                <Text style={{ color: "green" }}>✓</Text> pay in cash when
-                delivered.
-              </Text>
-            </View> */}
           </View>
         </View>
 
+        {/* cash on delivery/return/comming soon */}
         <BenefitsBar
           style={{ marginTop: 10 }}
           // onPressCOD={() => openCommitmentModal("Cash On Delivery", "Pay in cash when your order arrives.")}
@@ -935,23 +951,17 @@ const ProductDetails = ({ route }) => {
           </View>
         </Modal>
 
-        <Text style={{ paddingTop: 15 }}>
+        <Text style={{ paddingTop: 15, paddingLeft: 10}}>
           Code number : {data?.productCodeNumber}
         </Text>
-        <View>
-          <View
-            style={{
-              borderBottomWidth: 2,
-              borderColor: "#eee",
-              paddingBottom: 0,
-              marginBottom: 0,
-            }}
-          >
-            <Text style={styles.descLabel}>Product Details</Text>
+        {/* product details */}
+        <View style={styles.reviewPreview}>
+          <View style={styles.reviewPreviewHeader}>
+            <Text style={styles.reviewTitle}>Product Details</Text>
           </View>
 
           {data?.description && (
-            <View style={{ position: "relative", marginTop: 8 }}>
+            <View style={[styles.reviewItem]}>
               {/* 10-line preview */}
               <Text
                 onTextLayout={onTextLayout}
@@ -1095,6 +1105,28 @@ const ProductDetails = ({ route }) => {
             title={data?.productName || "Photos"}
           />
         )}
+        {/* product Q&A */}
+        <View style={styles.reviewPreview}>
+          <View style={styles.reviewPreviewHeader}>
+            <Text style={styles.reviewTitle}>Product Q&A</Text>
+          </View>
+          {productQA.map((item, idx) => (
+            <View key={idx} style={styles.reviewItem}>
+              <View style={{ display: "flex" }}>
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 15,
+                    color: "#555555",
+                  }}
+                >
+                  Qua: {item.question}
+                </Text>
+                <Text style={{ color: "gray" }}>Ans: {item.answer}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
 
         <View style={{ marginTop: 40, marginBottom: -60 }}>
           <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
@@ -1334,10 +1366,12 @@ const styles = StyleSheet.create({
 
   //delivery return style
   commitHeaderWrapper: {
-    paddingTop: 10,
+    paddingTop: 5,
     paddingBottom: 20,
+    borderRadius:7
   },
   commitHeaderText: {
+    paddingLeft:5,
     fontWeight: "bold",
     fontSize: 16,
     color: "#222",
@@ -1533,7 +1567,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  reviewTitle: { fontSize: 16, fontWeight: "700", color: "#222" },
+  reviewTitle: { fontSize: 17, fontWeight: "700", color: "#444" },
   moreBtn: {
     backgroundColor: "#111",
     paddingHorizontal: 10,
@@ -1546,7 +1580,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderColor: "#F1F1F1",
+    borderColor: "#f1f1f1",
   },
   reviewUser: { fontWeight: "700", color: "#333", marginBottom: 2 },
   reviewText: { color: "#333", marginTop: 4, lineHeight: 18 },
@@ -1560,6 +1594,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#f2f2f2",
   },
   thumbImg: { width: "100%", height: "100%" },
+  pQAMain: {
+    marginTop: 16,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
 });
 
 export default ProductDetails;

@@ -528,6 +528,7 @@ const OrderItemRow = ({
           ) : null}
           <Text style={styles.itemMeta}>Qty: {item?.quantity || 1}</Text>
           <Text style={styles.itemMeta}>Price: {item?.price ?? "-"}</Text>
+          <Text style={styles.itemMeta}>product Code : {item?.productCodeNumber ?? "-"}</Text>
         </View>
       </View>
 
@@ -894,7 +895,7 @@ const ProfilePage = () => {
             Ship to:{" "}
             <Text style={styles.orderMetaValue}>
               {(ship.address || "-") +
-                (ship.district ? `, ${ship.district}` : "")}
+                (ship.district ? `, ${ship.district}, ${ship?.upazila ? ship?.upazila : ''}` : "")}
             </Text>
           </Text>
           <Text style={styles.orderMetaText}>

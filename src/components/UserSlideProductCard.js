@@ -25,6 +25,16 @@ const UserSlideProductCard = ({
   }
 
   const imgUri = ensureHttps(productData?.img);
+  //api  return true
+  const isFreeCampaing = true;
+  const deviceId = false;
+  const userAlreadyPurchase = false;
+  let isPurchese = deviceId || userAlreadyPurchase;
+
+  let setSellingPr =
+    productData?.selling <= 150 && isFreeCampaing && !isPurchese
+      ? "Free"
+      : `৳${productData?.selling}`;
 
   return (
     <TouchableOpacity
@@ -50,7 +60,7 @@ const UserSlideProductCard = ({
         transition={0}
         recyclingKey={productData?.cardKey || productData?._id}
       />
-      <Text style={styles.price}>৳{productData?.selling}</Text>
+      <Text style={styles.price}>{setSellingPr}</Text>
     </TouchableOpacity>
   );
 };

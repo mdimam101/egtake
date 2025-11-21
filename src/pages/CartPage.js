@@ -156,9 +156,10 @@ const CartPage = () => {
         (s) => (s.size || "").toLowerCase() === (item.size || "").toLowerCase()
       );
       if (!sizeObj || sizeObj.stock === 0) return { inStock: false };
+      let actualPrice = variant?.SpcSelling ? variant?.SpcSelling : item.productId.selling;
       return {
         inStock: true,
-        price: item.productId.selling || item.productId.price,
+        price: actualPrice//item.productId.selling || item.productId.price,
       };
     } else {
       const totalStock = variant.sizes.reduce(
@@ -166,9 +167,12 @@ const CartPage = () => {
         0
       );
       if (totalStock === 0) return { inStock: false };
+      let actualPrice = variant?.SpcSelling ? variant?.SpcSelling : item.productId.selling;
+      console.log("actualPrice....", actualPrice);
+      
       return {
         inStock: true,
-        price: item.productId.selling || item.productId.price,
+        price: actualPrice//item.productId.selling || item.productId.price,
       };
     }
   };
@@ -201,7 +205,7 @@ const CartPage = () => {
       const result = findStockFromLatest(item, latestProducts);
       return result.inStock && selectedItems.includes(item._id);
     });
-    // console.log("🦌🦌selectedItemsDetails🦌🦌", selectedItemsDetails);
+     console.log("🦌🦌selectedItemsDetails🦌🦌", selectedItemsDetails);
 
     navigation.navigate("CheckoutPage", { selectedItemsDetails });
   };

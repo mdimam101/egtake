@@ -1,17 +1,16 @@
-import React from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import ensureHttps from '../common/ensureHttps';
 
 const CheckoutItemCard = ({ item }) => {
-   const { productId, quantity, color, size, image } = item;
-  const price = productId?.selling  || 0;//|| productId?.price
-  const total = price * quantity;
+  const {  quantity, color, size, image, selling } = item;
+  const total = selling * quantity;
 
   return (
     <View style={styles.card}>
-       <Image source={{ uri: image.replace("http://", "https://") }} style={styles.image} />
+       <Image source={{ uri: ensureHttps(image) }} style={styles.image} />
       <View style={styles.details}>
         <Text style={styles.price}>৳{total}</Text>
-        <Text style={styles.qty}>Qty: {quantity}</Text>
+        <Text style={styles.qty}>{color}/{size}(Qty: {quantity})</Text>
       </View>
     </View>
   );

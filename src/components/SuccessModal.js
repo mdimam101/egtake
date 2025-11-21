@@ -1,6 +1,5 @@
 // components/SuccessModal.js
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 
 const SuccessModal = ({ visible, onClose }) => {
@@ -12,6 +11,7 @@ const SuccessModal = ({ visible, onClose }) => {
         </View>
         <Text style={styles.title}>Thank You!</Text>
         <Text style={styles.message}>Your order has been placed successfully.</Text>
+        <Text style={styles.message}>Please check order details in your profile page.</Text>
         <TouchableOpacity onPress={onClose} style={styles.okBtn}>
           <Text style={{ color: '#fff' }}>OK</Text>
         </TouchableOpacity>

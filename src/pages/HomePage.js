@@ -158,7 +158,7 @@ const HomePage = () => {
 
           // Under99 (latest→oldest) + de-dup by _id
           const under99Sorted = optimized
-            .filter((p) => (p.selling ?? Infinity) <= 99)
+            .filter((p) => (p.selling ?? Infinity) <= 150)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
           const seenU = new Set();
           const under99Unique = [];
@@ -233,7 +233,7 @@ const HomePage = () => {
 
           //when needUpdate Under99  (latest→oldest) + de-dup by _id
           const under99Sorted = optimized
-            .filter((p) => (p.selling ?? Infinity) <= 99)
+            .filter((p) => (p.selling ?? Infinity) <= 150)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
           const seenU2 = new Set();
           const under99Unique2 = [];
@@ -586,7 +586,7 @@ const HomePage = () => {
             {selectedCategory === "_trending"
               ? "🔥 All Trending Products"
               : selectedCategory === "_below99"
-              ? "💸 All 0~99 Products"
+              ? "💸 All 0~199 Products"
               : selectedCategory === "_handcraft"
               ? "🧵 All Hand Craft Products"
               : "💥 All Sales Products"}
@@ -712,12 +712,12 @@ const HomePage = () => {
                   </>
                 )}
 
-                {/* 💸 0~99 */}
+                {/* 💸 0~199 */}
                 <LinearGradient
                   colors={["#F2E6E0", "#fffce5"]}
                   style={styles.commitHeaderWrapper}
                 >
-                  <Text style={styles.commitHeaderText}>💸 0~99 Shop</Text>
+                  <Text style={styles.commitHeaderText}>💸 0~199 Shop</Text>
                 </LinearGradient>
                 {renderSlide("under99")}
 
