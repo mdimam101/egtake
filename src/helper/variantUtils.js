@@ -54,6 +54,8 @@ export const generateOptimizedVariants = (products = []) => {
         img: vv?.images?.[0] || item?.img || item?.images?.[0] || null,
         variantColor: vv?.color ?? null,
         variantSize: vv?.size ?? null,
+        spcProductName:vv?.SpcProductName,
+        spcSelling: vv?.SpcSelling,
         trandingProduct: !!item.trandingProduct,
         handCraft: !!item.handCraft,
         salesOn:!!item.salesOn,

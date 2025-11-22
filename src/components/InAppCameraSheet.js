@@ -95,7 +95,7 @@ export default function InAppCameraSheet({ visible, onClose, onTaken }) {
 
           {preview ? (
             <View style={{ backgroundColor:"#000" }}>
-              <Image source={{ uri: preview }} style={{ width:"100%", height:420 }} resizeMode="cover" />
+              <Image source={{ uri: preview }} style={{ width:"100%", height:420 }} contentFit="cover" />
               <View style={{ flexDirection:"row", padding:12, gap:8, backgroundColor:"#111" }}>
                 <TouchableOpacity
                   onPress={() => setPreview("")}

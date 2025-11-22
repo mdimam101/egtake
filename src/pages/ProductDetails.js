@@ -38,7 +38,7 @@ import isEqual from "lodash.isequal";
 import Toast from "react-native-toast-message";
 import { canon, ensureHttps } from "../common/urlUtils";
 import SkeletonCard from "../components/SkeletonCard";
-import { pushGuestCartUnique } from "../helper/guestCart";
+import { cartDuplicateCheck, pushGuestCartUnique } from "../helper/guestCart";
 import { increaseUserRecentInterest } from "../helper/sortByUserInterest";
 import { trackBasic } from "../helper/trackBasic";
 
@@ -47,6 +47,7 @@ import { Image as ExpoImage } from "expo-image";
 import { CommonActions } from "@react-navigation/native";
 import BenefitsBar from "../components/BenefitsBar";
 import ProductQualityViz from "../components/ProductQualityBlock";
+import ProductVideoSection from "../components/ProductVideoSection";
 
 const ROLLING_LIMIT = 3;
 
@@ -93,6 +94,8 @@ const ProductDetails = ({ route }) => {
     selling: 0,
     sizeDetails: [],
     qualityType: "",
+    productQA: [],
+    productVideo: {}
   });
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -266,7 +269,7 @@ const ProductDetails = ({ route }) => {
 
         if (res.data.success) {
           const fresh = res.data.data;
-          console.log("🦌◆🦌◆details", fresh);
+          // console.log("🦌◆🦌◆details", fresh);
 
           if (!isEqual(fresh, cached)) {
             hydrateUI(fresh); // only if changed
@@ -378,11 +381,17 @@ const ProductDetails = ({ route }) => {
         Toast.show({ type: "info", text1: "Already in cart" }); // duplicate হলে
       }
     } else {
-      // ✅ Logged-in → server cart as-is
-      await addToCart(payload);
-      fetchUserAddToCart(true);
-      trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
-      //Toast.show({ type: "success", text1: "Added to cart" });
+      // duplicate check in local storage
+      const res = await cartDuplicateCheck(payload);
+      if (res.existsAddToCart) {
+        Toast.show({ type: "info", text1: "Already in cart" });
+      } else {
+        // ✅ Logged-in → server cart as-is
+        await addToCart(payload);
+        fetchUserAddToCart(true);
+        trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
+        //Toast.show({ type: "success", text1: "Added to cart" });
+      }
     }
   };
 
@@ -543,16 +552,16 @@ const ProductDetails = ({ route }) => {
   const desc = normalizeNewlinesServer(data?.description);
   data.description = desc;
 
-  const productQA = [
-    {
-      question: "product er color thakbe ki?",
-      answer: "Yes 100%",
-    },
-    {
-      question: "aita ki shuti",
-      answer: "Yes soft kapor",
-    },
-  ];
+  // const productQA = [
+  //   {
+  //     question: "product er color thakbe ki?",
+  //     answer: "Yes 100%",
+  //   },
+  //   {
+  //     question: "aita ki shuti",
+  //     answer: "Yes soft kapor",
+  //   },
+  // ];
 
   return (
     <View style={{ flex: 1 }}>
@@ -807,7 +816,7 @@ const ProductDetails = ({ route }) => {
           <View style={styles.commitHeaderWrapper}></View>
 
           <View style={styles.policyCard}>
-             <LinearGradient
+            <LinearGradient
               colors={["#FFF39C", "#fdfdfdff"]} // উপরে গাঢ়, নিচে হালকা
               style={styles.commitHeaderWrapper}
             >
@@ -951,9 +960,13 @@ const ProductDetails = ({ route }) => {
           </View>
         </Modal>
 
-        <Text style={{ paddingTop: 15, paddingLeft: 10}}>
+        <Text style={{ paddingTop: 15, paddingLeft: 10 }}>
           Code number : {data?.productCodeNumber}
         </Text>
+
+        {data?.productVideo?.url && data?.productVideo?.thumbnail && (
+          <ProductVideoSection productVideo={data.productVideo} />
+        )}
         {/* product details */}
         <View style={styles.reviewPreview}>
           <View style={styles.reviewPreviewHeader}>
@@ -1106,27 +1119,29 @@ const ProductDetails = ({ route }) => {
           />
         )}
         {/* product Q&A */}
-        <View style={styles.reviewPreview}>
-          <View style={styles.reviewPreviewHeader}>
-            <Text style={styles.reviewTitle}>Product Q&A</Text>
-          </View>
-          {productQA.map((item, idx) => (
-            <View key={idx} style={styles.reviewItem}>
-              <View style={{ display: "flex" }}>
-                <Text
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: 15,
-                    color: "#555555",
-                  }}
-                >
-                  Qua: {item.question}
-                </Text>
-                <Text style={{ color: "gray" }}>Ans: {item.answer}</Text>
-              </View>
+        {data?.productQA?.length > 0 && (
+          <View style={styles.reviewPreview}>
+            <View style={styles.reviewPreviewHeader}>
+              <Text style={styles.reviewTitle}>Product Q&A</Text>
             </View>
-          ))}
-        </View>
+            {data?.productQA?.map((item, idx) => (
+              <View key={idx} style={styles.reviewItem}>
+                <View style={{ display: "flex" }}>
+                  <Text
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: 15,
+                      color: "#555555",
+                    }}
+                  >
+                    Qua: {item.question}
+                  </Text>
+                  <Text style={{ color: "gray" }}>Ans: {item.answer}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={{ marginTop: 40, marginBottom: -60 }}>
           <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
@@ -1251,7 +1266,7 @@ const styles = StyleSheet.create({
   sliderImage: {
     width: screenWidth,
     height: 500,
-    resizeMode: "contain",
+    contentFit: "contain",
     backgroundColor: "#fff",
   },
   imageCountText: {
@@ -1294,7 +1309,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   activeThumbnailBox: { borderColor: "#ff5722", borderWidth: 2 },
-  thumbnailImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  thumbnailImage: { width: "100%", height: "100%", contentFit: "cover" },
   sizeLabel: { fontSize: 16, fontWeight: "600", marginTop: 20 },
   sizeOptions: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
   sizeBox: {
@@ -1368,10 +1383,10 @@ const styles = StyleSheet.create({
   commitHeaderWrapper: {
     paddingTop: 5,
     paddingBottom: 20,
-    borderRadius:7
+    borderRadius: 7,
   },
   commitHeaderText: {
-    paddingLeft:5,
+    paddingLeft: 5,
     fontWeight: "bold",
     fontSize: 16,
     color: "#222",

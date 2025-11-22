@@ -50,7 +50,7 @@ function BenefitItem({ iconSource, title, onPress }) {
         <Image
           source={iconSource}
           style={styles.icon}
-          resizeMode="contain"
+          contentFit="contain"
           accessibilityIgnoresInvertColors
         />
       </View>

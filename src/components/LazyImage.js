@@ -15,7 +15,7 @@ const LazyImage = ({ source, style }) => {
       <Image
         source={{ uri: source }}
         style={[style, loading && { opacity: 0 }]}
-        resizeMode="cover"
+        contentFit="cover"
         onLoadEnd={() => setLoading(false)}
       />
     </View>

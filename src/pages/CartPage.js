@@ -65,6 +65,9 @@ const CartPage = () => {
       const cacheArr = raw ? JSON.parse(raw) : [];
       if (cacheArr.length > 0) {
         setCartItems(cacheArr); // 👈 cache দেখালাম
+      } 
+      if(cacheArr.length === 0) {
+        setCartItems([])
       }
 
       // 2) guest হলে এখানেই শেষ
@@ -168,7 +171,7 @@ const CartPage = () => {
       );
       if (totalStock === 0) return { inStock: false };
       let actualPrice = variant?.SpcSelling ? variant?.SpcSelling : item.productId.selling;
-      console.log("actualPrice....", actualPrice);
+      // console.log("actualPrice....", actualPrice);
       
       return {
         inStock: true,
@@ -205,7 +208,7 @@ const CartPage = () => {
       const result = findStockFromLatest(item, latestProducts);
       return result.inStock && selectedItems.includes(item._id);
     });
-     console.log("🦌🦌selectedItemsDetails🦌🦌", selectedItemsDetails);
+    //  console.log("🦌🦌selectedItemsDetails🦌🦌", selectedItemsDetails);
 
     navigation.navigate("CheckoutPage", { selectedItemsDetails });
   };

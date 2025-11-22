@@ -2,7 +2,7 @@
   "expo": {
     "name": "EGtake",
     "slug": "test-eas-upload",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/EgtakeLogo.png",
     "scheme": "testeasupload",
@@ -22,8 +22,8 @@
         "CAMERA"
       ],
       "blockedPermissions": [
-       "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
-     ]
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -40,7 +40,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

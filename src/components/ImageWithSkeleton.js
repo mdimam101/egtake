@@ -15,7 +15,7 @@ const ImageWithSkeleton = ({ uri, style }) => {
       <Image
         source={{ uri }}
         style={[style, { position: "absolute", opacity: loaded ? 1 : 0 }]}
-        resizeMode="contain"
+        contentFit="contain"
         onLoad={() => setLoaded(true)}
       />
     </View>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import SummaryApi from '../common/SummaryApi';
 
-const updateProductStock = async (productId, variantImage, size, quantity) => {
+const updateProductStock = async (productId, variantImage, size, quantity, isCancelOrder = false) => {
 
   try {
     const res = await axios.put(
@@ -10,7 +10,8 @@ const updateProductStock = async (productId, variantImage, size, quantity) => {
         productId,
         variantImage,
         size,
-        quantity, // quantity to reduce
+        quantity, // quantity +-
+        isCancelOrder, //true/false 
       },
       {
         withCredentials: true,

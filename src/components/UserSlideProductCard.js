@@ -30,11 +30,12 @@ const UserSlideProductCard = ({
   const deviceId = false;
   const userAlreadyPurchase = false;
   let isPurchese = deviceId || userAlreadyPurchase;
+  let selling = productData?.spcSelling || productData?.selling
 
   let setSellingPr =
-    productData?.selling <= 150 && isFreeCampaing && !isPurchese
+    selling <= 150 && isFreeCampaing && !isPurchese
       ? "Free"
-      : `৳${productData?.selling}`;
+      : `৳${selling}`;
 
   return (
     <TouchableOpacity
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 130,
     borderRadius: 6,
-    resizeMode: "cover",
+    contentFit: "cover",
   },
   price: {
     fontSize: 16,

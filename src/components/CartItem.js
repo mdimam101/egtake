@@ -197,14 +197,14 @@ const CartItem = ({
         <Image
           source={{ uri: variantImage.replace("http://", "https://") }}
           style={styles.image}
-          resizeMode="cover"
+          contentFit="cover"
         />
       </TouchableOpacity>
 
       <View style={styles.info}>
         <View style={styles.headerRow}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-            {productData?.productName || product.productName}
+            {product.productName || productData?.productName }
           </Text>
           <TouchableOpacity onPress={handleRemove}>
             <Text style={styles.removeBtn}>✕</Text>

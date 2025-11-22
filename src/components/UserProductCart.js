@@ -82,6 +82,9 @@ function UserProductCart({
     });
   };
 
+  let productName = productData?.spcProductName || productData?.productName
+  let selling = productData?.spcSelling || productData?.selling
+
   return (
     <TouchableOpacity
       style={[styles.card, disabled && { opacity: 0.6 }]}
@@ -111,7 +114,7 @@ function UserProductCart({
           style={{
             width: "100%",
             height: resolvedHeight ?? cardWidth * DEFAULT_RATIO,
-            resizeMode: "cover",
+            contentFit: "cover",
             borderRadius: 8,
           }}
           onError={() => setResolvedHeight(cardWidth * DEFAULT_RATIO)}
@@ -119,11 +122,11 @@ function UserProductCart({
       )}
       <View style={styles.info}>
         <Text numberOfLines={2} style={styles.name}>
-          {productData?.productName}
+          {productName}
         </Text>
         <Text style={styles.price}>
           <Text style={styles.tkIcon}>৳</Text>
-          {productData?.selling}
+          {selling}
         </Text>
       </View>
       {/* চাইলে এখানে news ticker / extra UI যোগ করো */}

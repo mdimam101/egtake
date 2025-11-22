@@ -29,6 +29,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import SummaryApi from "../common/SummaryApi";
 import ReviewModal from "../components/ReviewModal";
 import Context from "../context";
+import updateProductStock from "../helper/updateProductStock";
 import { setUserDetails } from "../store/userSlice";
 
 // 🆕 Support config (replace with your real numbers)
@@ -754,7 +755,7 @@ const ProfilePage = () => {
     }
   };
 
-  const handleCancelOrder = async (orderId) => {
+  const handleCancelOrder = async (orderId, item) => {
     try {
       const res = await axios.delete(
         `${SummaryApi.cancel_user_order.url}/${orderId}`,
@@ -765,6 +766,19 @@ const ProfilePage = () => {
       if (res.data?.success) {
         setOrders((prev) => prev.filter((o) => o._id !== orderId));
         Toast.show({ type: "success", text1: "Order cancelled" });
+        // product stock update
+         await Promise.all(
+                  item.map((item) =>
+                    updateProductStock(
+                      item.productId,
+                      item.image,
+                      item.size,
+                      item.quantity,
+                      true
+                    )
+                  )
+                );
+        
       } else {
         Toast.show({
           type: "error",
@@ -987,7 +1001,7 @@ const ProfilePage = () => {
               {isPending ? (
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: "#d32f2f" }]}
-                  onPress={() => setCancelAskId(order._id)} // ✅ আগে modal খুলবে
+                  onPress={() => setCancelAskId({orderId:order._id, orderItems:order.items})} // ✅ আগে modal খুলবে
                 >
                   <Text style={styles.actionBtnText}>Cancel</Text>
                 </TouchableOpacity>
@@ -1238,15 +1252,15 @@ const ProfilePage = () => {
       />
 
       <ConfirmModal
-        visible={!!cancelAskId}
+        visible={!!cancelAskId?.orderId}
         title="Are you sure you want to cancel this order?"
         cancelText="No"
         okText="Yes, cancel"
         onCancel={() => setCancelAskId(null)}
         onOk={() => {
-          const id = cancelAskId;
+          const id = cancelAskId?.orderId;
           setCancelAskId(null);
-          handleCancelOrder(id); // ✅ আগের ফাংশনই কল হবে
+          handleCancelOrder(id, cancelAskId?.orderItems); // ✅ আগের ফাংশনই কল হবে
         }}
       />
 

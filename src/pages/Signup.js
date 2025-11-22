@@ -487,7 +487,7 @@ const SignupPage = () => {
           type: "error",
           text1: res?.data?.message || "Guest login failed",
         });
-        console.log("Guest login failed:", res?.data);
+       // console.log("Guest login failed:", res?.data);
       }
     } catch (err) {
       Toast.show({

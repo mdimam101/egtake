@@ -167,3 +167,32 @@ export async function guestRemove(match) {
   return { ok: true, items: filtered };
 }
 
+export const cartDuplicateCheck = async (item) => {
+  // normalize করলে compare stable হয়
+  const normImage = (item.image || '').replace('https://', 'http://');
+  const normSize  = (item.size  || '').trim();
+  const normColor = (item.color || '').trim();
+
+  const raw = await AsyncStorage.getItem(GUEST_CART_KEY);
+  const arr = parse(raw);
+
+  const exists = arr.some(x =>
+    x.productId && typeof x.productId === 'object'
+      ? (
+          // new-shape item
+          x.productId._id === item.productId &&
+          (x.size || '')  === normSize &&
+          (x.color || '') === normColor &&
+          (x.image || '') === normImage
+        )
+      : (
+          // old-shape fallback
+          x.productId === item.productId &&
+          (x.size || '')  === normSize &&
+          (x.color || '') === normColor &&
+          (x.image || '') === normImage
+        )
+  );
+  // console.log("exist....2", exists);
+    return { existsAddToCart: exists }; // ❌ already in cart
+}
