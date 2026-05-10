@@ -35,7 +35,7 @@ import { setUserDetails } from "../store/userSlice";
 // 🆕 Support config (replace with your real numbers)
 // const SUPPORT_PHONE = "+8801712345678";
 // const WHATSAPP_PHONE = "+817045439721";
-const WHATSAPP_MSG = "Hi EGtake";
+const WHATSAPP_MSG = "Hi Pyzara";
 
 // ---------- Status constants ----------
 const ORDER_STATUS = {

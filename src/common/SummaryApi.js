@@ -1,6 +1,4 @@
-const BASE_URL ="https://api.egtake.com" //"https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com"//// 'https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com' //"https://ecommerce-project-swart-five.vercel.app" //"http://192.168.3.4:8080"// "http://192.168.3.4:8080"// "https://ecommerce-project-mbcd.vercel.app"//
-;
-
+const BASE_URL = "https://api.pyzara.com"; //"https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com"//// 'https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com' //"https://ecommerce-project-swart-five.vercel.app" //"http://192.168.3.4:8080"// "http://192.168.3.4:8080"// "https://ecommerce-project-mbcd.vercel.app"//
 const SummaryApi = {
   signUp: {
     url: `${BASE_URL}/api/signup`,
@@ -48,7 +46,7 @@ const SummaryApi = {
   },
   getCartProduct: {
     url: `${BASE_URL}/api/get-cart-products`,
-    method: "get"
+    method: "get",
   },
   increaseQuantity: {
     url: `${BASE_URL}/api/increase-quantity`,
@@ -59,8 +57,8 @@ const SummaryApi = {
     method: "post",
   },
   removeFromCart: {
-    url: `${BASE_URL}/api/remove`, 
-    method: 'DELETE',
+    url: `${BASE_URL}/api/remove`,
+    method: "DELETE",
   },
   searchProduct: {
     url: `${BASE_URL}/api/search`,
@@ -68,23 +66,23 @@ const SummaryApi = {
   },
   searchSuggestion: {
     url: `${BASE_URL}/api/search-suggestions`,
-    method: "get"
+    method: "get",
   },
   get_banner: {
     url: `${BASE_URL}/api/banner`,
-   method: "get",
+    method: "get",
   },
   upload_banner: {
     url: `${BASE_URL}/api/upload-banner`,
-   method: "post",
+    method: "post",
   },
   delete_banner: {
     url: `${BASE_URL}/api/delete-banner`,
-   method: "DELETE",
+    method: "DELETE",
   },
   orders: {
     url: `${BASE_URL}/api/orders`,
-   method: "post",
+    method: "post",
   },
   // ✅ New endpoint for saving/updating user default shipping
   update_shipping: {
@@ -101,43 +99,43 @@ const SummaryApi = {
   },
   cancel_user_order: {
     url: `${BASE_URL}/api/cancel`,
-    method: "DELETE"
+    method: "DELETE",
   },
   return_user_order: {
     url: `${BASE_URL}/api/return`, // PUT `/return/:orderId`
     method: "put",
   },
   return_user_order_item: {
-  url: `${BASE_URL}/api/return`, // reuse same base
-  method: "put"
-},
-// when order placeConfirm
-updateProductStock: {
-  url: `${BASE_URL}/api/reduce-stock`,
-  method: "put"
-},
-create_review: {
+    url: `${BASE_URL}/api/return`, // reuse same base
+    method: "put",
+  },
+  // when order placeConfirm
+  updateProductStock: {
+    url: `${BASE_URL}/api/reduce-stock`,
+    method: "put",
+  },
+  create_review: {
     url: `${BASE_URL}/api/reviews`,
     method: "post",
   },
   get_product_reviews: (productId) => `${BASE_URL}/api/reviews/${productId}`,
 
-  coupon_apply: { 
-    url: `${BASE_URL}/api/coupons/apply`, 
-    method: "POST" 
+  coupon_apply: {
+    url: `${BASE_URL}/api/coupons/apply`,
+    method: "POST",
   },
 
   coupon_commit: {
-  url: `${BASE_URL}/api/coupons/commit`,
-  method: "post",
-},
+    url: `${BASE_URL}/api/coupons/commit`,
+    method: "post",
+  },
 
-   google_login: {
+  google_login: {
     url: `${BASE_URL}/auth/google`,
     method: "post",
   },
 
-    // 🔐 Phone OTP
+  // 🔐 Phone OTP
   auth_request_otp: {
     url: `${BASE_URL}/api/auth/request-otp`,
     method: "post",
@@ -147,8 +145,7 @@ create_review: {
     method: "post",
   },
 
-
-    // --- BASIC TRACK ---
+  // --- BASIC TRACK ---
   track_basic: {
     url: `${BASE_URL}/api/track-basic`,
     method: "post",
@@ -172,14 +169,13 @@ create_review: {
     method: "get",
   },
   delete_account: {
-  url: `${BASE_URL}/api/account`,
-  method: "delete",
-},
- get_common_info: {
-  url: `${BASE_URL}/api/get-common-info`,
-  method: "get",
-},
-
+    url: `${BASE_URL}/api/account`,
+    method: "delete",
+  },
+  get_common_info: {
+    url: `${BASE_URL}/api/get-common-info`,
+    method: "get",
+  },
 };
 
 export default SummaryApi;

@@ -76,7 +76,7 @@ const ProductDetails = ({ route }) => {
 
   // use for recomended product list
   const productDataListfromCache = useSelector(
-    (s) => s.productState.productList
+    (s) => s.productState.productList,
   );
 
   const { fetchUserAddToCart, cartCountProduct } = useContext(Context);
@@ -95,7 +95,7 @@ const ProductDetails = ({ route }) => {
     sizeDetails: [],
     qualityType: "",
     productQA: [],
-    productVideo: {}
+    productVideo: {},
   });
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -126,7 +126,7 @@ const ProductDetails = ({ route }) => {
 
   const previewReviews = useMemo(
     () => (Array.isArray(reviews) ? reviews.slice(0, 3) : []),
-    [reviews]
+    [reviews],
   );
 
   const { avgRating, reviewCount } = useMemo(() => {
@@ -179,7 +179,7 @@ const ProductDetails = ({ route }) => {
       const passedImage = route.params?.image || "";
       const passedKey = canon(passedImage);
       const variantIndexFromImage = productData.variants.findIndex((variant) =>
-        (variant.images || []).some((u) => canon(u) === passedKey)
+        (variant.images || []).some((u) => canon(u) === passedKey),
       );
       const finalVariantIndex =
         variantIndexFromImage !== -1 ? variantIndexFromImage : 0;
@@ -308,8 +308,8 @@ const ProductDetails = ({ route }) => {
     new Set( // (optional) ডুপ্লিকেট থাকলে কেটে দেবে
       (data?.sizeDetails || [])
         .map((x) => String(x.size).trim())
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   );
 
   const getStockBySize = (size) => {
@@ -446,7 +446,7 @@ const ProductDetails = ({ route }) => {
       try {
         const res = await axios.get(
           SummaryApi.get_product_reviews(data._id),
-          { signal: controller.signal } // ✅
+          { signal: controller.signal }, // ✅
         );
         if (alive && res.data.success) {
           setReviews(res.data.data || []);
@@ -511,7 +511,7 @@ const ProductDetails = ({ route }) => {
 
       return false; // default push ব্লক (যদি তোমার কলার এটায় রিলাই করে)
     },
-    [navigation, getPrimaryImage]
+    [navigation, getPrimaryImage],
   );
 
   useEffect(() => {
@@ -599,7 +599,7 @@ const ProductDetails = ({ route }) => {
               // currentImage কে canonical key বানিয়ে map-এ খুঁজি
               const currentKey = canon(currentImage);
               const found = imageVariantMap.find(
-                (item) => item.key === currentKey
+                (item) => item.key === currentKey,
               );
 
               if (found && found.variantIndex !== selectedVariantIndex) {
@@ -641,7 +641,7 @@ const ProductDetails = ({ route }) => {
                 <ExpoImage
                   source={{
                     uri: ensureHttps(
-                      currentIndex === index ? selectedImg || img : img
+                      currentIndex === index ? selectedImg || img : img,
                     ),
                   }}
                   style={styles.sliderImage}
@@ -714,7 +714,7 @@ const ProductDetails = ({ route }) => {
                     const newImg = variant.images?.[0];
                     setSelectedImg(ensureHttps(newImg)); //setSelectedImg(newImg);
                     const imgIndex = allImages.findIndex(
-                      (img) => canon(img) === canon(newImg) //(img) => img === newImg
+                      (img) => canon(img) === canon(newImg), //(img) => img === newImg
                     );
                     if (imgIndex !== -1 && imageSliderRef.current) {
                       imageSliderRef.current.scrollTo({
@@ -784,7 +784,7 @@ const ProductDetails = ({ route }) => {
             </Text>
             {(() => {
               const selected = selectedVariantDetails.find(
-                (s) => s.size === selectedSize
+                (s) => s.size === selectedSize,
               );
               if (!selected) return null;
               return (
@@ -820,7 +820,7 @@ const ProductDetails = ({ route }) => {
               colors={["#dfefd2ff", "#fdfdfdff"]} // উপরে গাঢ়, নিচে হালকা
               style={styles.commitHeaderWrapper}
             >
-              <Text style={styles.commitHeaderText}>EGtake Commitment</Text>
+              <Text style={styles.commitHeaderText}>Pyzara Commitment</Text>
             </LinearGradient>
             {/* Shipping */}
             <TouchableOpacity
@@ -831,7 +831,7 @@ const ProductDetails = ({ route }) => {
                   `✓নারায়ণগঞ্জে ${commonInfo[0]?.nrGanjMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
                   \n✓ঢাকা ${commonInfo[0]?.DhakaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
                   \n✓নারায়ণগঞ্জ ও ঢাকার বাইরে ${commonInfo[0]?.OthersAreaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
-                  \n✓--Narayanganj Express delivery within 3 hours--`
+                  \n✓--Narayanganj Express delivery within 3 hours--`,
                 )
               }
             >
@@ -855,7 +855,7 @@ const ProductDetails = ({ route }) => {
               onPress={() =>
                 openCommitmentModal(
                   "Delivery Commitment",
-                  `✓ 100円 coupon code if delayed\n✓ Refund if items damaged\n✓ Refund if package lost\n✓ Refund if no delivery`
+                  `✓ 100円 coupon code if delayed\n✓ Refund if items damaged\n✓ Refund if package lost\n✓ Refund if no delivery`,
                 )
               }
             >
@@ -894,7 +894,7 @@ const ProductDetails = ({ route }) => {
                 openCommitmentModal(
                   "Free Return Commitment",
                   `✓ অর্ডার করা পণ্যের পরিবর্তে ভিন্ন কিছু এসেছে।\n✓ পণ্যটি পৌঁছানোর সময় ভাঙা, ফাটা, বা কাজ করছে না।\n✓ প্রয়োজনীয় পার্টস বা এক্সেসরিজ নেই (যেমন চার্জার, কভার, ক্যাবল ইত্যাদি)।\n✓ অর্ডার অনুযায়ী সাইজ বা কালার আসেনি।
-                  \n✓ অর্ডার অনুযায়ী সংখ্যা ঠিকমতো আসেনি।\n✓ ইলেকট্রনিক আইটেম চালু হয় না বা সমস্যা করে।`
+                  \n✓ অর্ডার অনুযায়ী সংখ্যা ঠিকমতো আসেনি।\n✓ ইলেকট্রনিক আইটেম চালু হয় না বা সমস্যা করে।`,
                 )
               }
             >
@@ -935,7 +935,7 @@ const ProductDetails = ({ route }) => {
           style={{ marginTop: 10 }}
           // onPressCOD={() => openCommitmentModal("Cash On Delivery", "Pay in cash when your order arrives.")}
           // onPressReturn={() => openCommitmentModal("7 Days Happy Return", "Return within 7 days in original condition.")}
-          // onPressPoints={() => openCommitmentModal("EGTAKE Points", "Earn points on every purchase and redeem later.")}
+          // onPressPoints={() => openCommitmentModal("Pyzara Points", "Earn points on every purchase and redeem later.")}
         />
 
         <Modal
@@ -1234,12 +1234,12 @@ const ProductDetails = ({ route }) => {
             {(totalStock ?? 0) <= 0
               ? "Out of Stock"
               : isSizeAvailable
-              ? !selectedSize
-                ? "Select Size"
-                : variantSizes.find((s) => s.size === selectedSize)?.stock > 0
-                ? "Add to Cart"
-                : "Out of Stock"
-              : "Add to Cart"}
+                ? !selectedSize
+                  ? "Select Size"
+                  : variantSizes.find((s) => s.size === selectedSize)?.stock > 0
+                    ? "Add to Cart"
+                    : "Out of Stock"
+                : "Add to Cart"}
           </Text>
         </TouchableOpacity>
       </View>

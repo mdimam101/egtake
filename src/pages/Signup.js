@@ -155,89 +155,89 @@
 //     }
 //   };
 
-  // // ✅ Guest flow: body তে শুধু { deviceId }
-  // const handleGuestContinue = async () => {
-  //   try {
-  //     setIsGuestSubmitting(true);
+// // ✅ Guest flow: body তে শুধু { deviceId }
+// const handleGuestContinue = async () => {
+//   try {
+//     setIsGuestSubmitting(true);
 
-  //     // Ensure deviceId (should already be there from useEffect/App bootstrap)
-  //     const deviceId = (await getDeviceId()) || (await ensureDeviceId());
-  //     if (!deviceId) {
-  //       Toast.show({ type: "error", text1: "Failed to get device id" });
-  //       return;
-  //     }
+//     // Ensure deviceId (should already be there from useEffect/App bootstrap)
+//     const deviceId = (await getDeviceId()) || (await ensureDeviceId());
+//     if (!deviceId) {
+//       Toast.show({ type: "error", text1: "Failed to get device id" });
+//       return;
+//     }
 
-  //     const res = await axios({
-  //       method: SummaryApi.signUp.method, // POST
-  //       url: SummaryApi.signUp.url,       // e.g., /api/user/signup
-  //       headers: { "Content-Type": "application/json" },
-  //       data: { deviceId },               // <<— only deviceId in body
-  //       withCredentials: true,
-  //     });
+//     const res = await axios({
+//       method: SummaryApi.signUp.method, // POST
+//       url: SummaryApi.signUp.url,       // e.g., /api/user/signup
+//       headers: { "Content-Type": "application/json" },
+//       data: { deviceId },               // <<— only deviceId in body
+//       withCredentials: true,
+//     });
 
-  //     if (res?.data?.success) {
-  //       Toast.show({ type: "success", text1: "Logged in successfully as guest" });
-  //       // navigation.reset({ index: 0, routes: [{ name: "Home" }] });
-  //       try {
-  //             const response = await axios({
-  //               method: SummaryApi.signIn.method,
-  //               url: SummaryApi.signIn.url,
-  //               headers: { "Content-Type": "application/json" },
-  //               withCredentials: true, // ✅ MUST for cookie auth
-  //               data: { deviceId },
-  //             });
-        
-  //             if (response.data.success) {
-  //               Toast.show({ type: "success", text1: "Login successful" });
-  //               fetchUserDetails();
-  //               navigation.navigate("Home");
-  //             } else {
-  //               Toast.show({
-  //                 type: "error",
-  //                 text1: response.data.message || "Login failed",
-  //               });
-  //             }
-  //           } catch (error) {
-  //             Toast.show({ type: "error", text1: "Something went wrong" });
-  //           }
-  //     } else {
-  //       try {
-  //             const response = await axios({
-  //               method: SummaryApi.signIn.method,
-  //               url: SummaryApi.signIn.url,
-  //               headers: { "Content-Type": "application/json" },
-  //               withCredentials: true, // ✅ MUST for cookie auth
-  //               data: { deviceId },
-  //             });
-        
-  //             if (response.data.success) {
-  //               Toast.show({ type: "success", text1: "Login successful" });
-  //               fetchUserDetails();
-  //               navigation.navigate("Home");
-  //             // } else {
-  //             //   Toast.show({
-  //             //     type: "error",
-  //             //     text1: response.data.message || "Login failed",
-  //             //   });
-  //             }
-  //           } catch (error) {
-  //             Toast.show({ type: "error", text1: "Something went wrong" });
-  //           }
-  //       Toast.show({
-  //         type: "error",
-  //         text1: res?.data?.message || "Guest login failed",
-  //       });
-  //       console.log("Guest login failed:", res?.data);
-  //     }
-  //   } catch (err) {
-  //     Toast.show({
-  //       type: "error",
-  //       text1: err?.response?.data?.message || "Guest login error",
-  //     });
-  //   } finally {
-  //     setIsGuestSubmitting(false);
-  //   }
-  // };
+//     if (res?.data?.success) {
+//       Toast.show({ type: "success", text1: "Logged in successfully as guest" });
+//       // navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+//       try {
+//             const response = await axios({
+//               method: SummaryApi.signIn.method,
+//               url: SummaryApi.signIn.url,
+//               headers: { "Content-Type": "application/json" },
+//               withCredentials: true, // ✅ MUST for cookie auth
+//               data: { deviceId },
+//             });
+
+//             if (response.data.success) {
+//               Toast.show({ type: "success", text1: "Login successful" });
+//               fetchUserDetails();
+//               navigation.navigate("Home");
+//             } else {
+//               Toast.show({
+//                 type: "error",
+//                 text1: response.data.message || "Login failed",
+//               });
+//             }
+//           } catch (error) {
+//             Toast.show({ type: "error", text1: "Something went wrong" });
+//           }
+//     } else {
+//       try {
+//             const response = await axios({
+//               method: SummaryApi.signIn.method,
+//               url: SummaryApi.signIn.url,
+//               headers: { "Content-Type": "application/json" },
+//               withCredentials: true, // ✅ MUST for cookie auth
+//               data: { deviceId },
+//             });
+
+//             if (response.data.success) {
+//               Toast.show({ type: "success", text1: "Login successful" });
+//               fetchUserDetails();
+//               navigation.navigate("Home");
+//             // } else {
+//             //   Toast.show({
+//             //     type: "error",
+//             //     text1: response.data.message || "Login failed",
+//             //   });
+//             }
+//           } catch (error) {
+//             Toast.show({ type: "error", text1: "Something went wrong" });
+//           }
+//       Toast.show({
+//         type: "error",
+//         text1: res?.data?.message || "Guest login failed",
+//       });
+//       console.log("Guest login failed:", res?.data);
+//     }
+//   } catch (err) {
+//     Toast.show({
+//       type: "error",
+//       text1: err?.response?.data?.message || "Guest login error",
+//     });
+//   } finally {
+//     setIsGuestSubmitting(false);
+//   }
+// };
 
 //   return (
 //     <KeyboardAvoidingView
@@ -417,7 +417,7 @@ const SignupPage = () => {
     })();
   }, []);
 
-    // ✅ Guest flow: body তে শুধু { deviceId }
+  // ✅ Guest flow: body তে শুধু { deviceId }
   const handleGuestContinue = async () => {
     try {
       setIsGuestSubmitting(true);
@@ -431,63 +431,63 @@ const SignupPage = () => {
 
       const res = await axios({
         method: SummaryApi.signUp.method, // POST
-        url: SummaryApi.signUp.url,       // e.g., /api/user/signup
+        url: SummaryApi.signUp.url, // e.g., /api/user/signup
         headers: { "Content-Type": "application/json" },
-        data: { deviceId },               // <<— only deviceId in body
+        data: { deviceId }, // <<— only deviceId in body
         withCredentials: true,
       });
 
       if (res?.data?.success) {
         try {
-              const response = await axios({
-                method: SummaryApi.signIn.method,
-                url: SummaryApi.signIn.url,
-                headers: { "Content-Type": "application/json" },
-                withCredentials: true, // ✅ MUST for cookie auth
-                data: { deviceId },
-              });
-        
-              if (response.data.success) {
-                Toast.show({ type: "success", text1: "Login successful" });
-                fetchUserDetails();
-                navigation.navigate("Home");
-              } else {
-                Toast.show({
-                  type: "error",
-                  text1: response.data.message || "Login failed",
-                });
-              }
-            } catch (error) {
-              Toast.show({ type: "error", text1: "Something went wrong" });
-            }
+          const response = await axios({
+            method: SummaryApi.signIn.method,
+            url: SummaryApi.signIn.url,
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true, // ✅ MUST for cookie auth
+            data: { deviceId },
+          });
+
+          if (response.data.success) {
+            Toast.show({ type: "success", text1: "Login successful" });
+            fetchUserDetails();
+            navigation.navigate("Home");
+          } else {
+            Toast.show({
+              type: "error",
+              text1: response.data.message || "Login failed",
+            });
+          }
+        } catch (error) {
+          Toast.show({ type: "error", text1: "Something went wrong" });
+        }
       } else {
         try {
-              const response = await axios({
-                method: SummaryApi.signIn.method,
-                url: SummaryApi.signIn.url,
-                headers: { "Content-Type": "application/json" },
-                withCredentials: true, // ✅ MUST for cookie auth
-                data: { deviceId },
-              });
-        
-              if (response.data.success) {
-                Toast.show({ type: "success", text1: "Login successful" });
-                fetchUserDetails();
-                navigation.navigate("Home");
-              } else {
-                Toast.show({
-                  type: "error",
-                  text1: response.data.message || "Login failed",
-                });
-              }
-            } catch (error) {
-              Toast.show({ type: "error", text1: "Something went wrong" });
-            }
+          const response = await axios({
+            method: SummaryApi.signIn.method,
+            url: SummaryApi.signIn.url,
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true, // ✅ MUST for cookie auth
+            data: { deviceId },
+          });
+
+          if (response.data.success) {
+            Toast.show({ type: "success", text1: "Login successful" });
+            fetchUserDetails();
+            navigation.navigate("Home");
+          } else {
+            Toast.show({
+              type: "error",
+              text1: response.data.message || "Login failed",
+            });
+          }
+        } catch (error) {
+          Toast.show({ type: "error", text1: "Something went wrong" });
+        }
         Toast.show({
           type: "error",
           text1: res?.data?.message || "Guest login failed",
         });
-       // console.log("Guest login failed:", res?.data);
+        // console.log("Guest login failed:", res?.data);
       }
     } catch (err) {
       Toast.show({
@@ -510,7 +510,7 @@ const SignupPage = () => {
       >
         {/* Brand Header */}
         <View style={styles.headerWrap}>
-          <Text style={styles.brand}>EGtake</Text>
+          <Text style={styles.brand}>Pyzara</Text>
           <Text style={styles.tagline}>Shop with confidence</Text>
         </View>
 
@@ -601,5 +601,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111",
   },
-  guestHint: { textAlign: "center", color: "#6b7280", fontSize: 12, marginTop: 6 },
+  guestHint: {
+    textAlign: "center",
+    color: "#6b7280",
+    fontSize: 12,
+    marginTop: 6,
+  },
 });

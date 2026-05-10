@@ -23,17 +23,17 @@ const PLACEHOLDER_COLOR = "#999";
 
 // ---- Support config
 
-const WHATSAPP_MSG = "Hi EGtake";
+const WHATSAPP_MSG = "Hi Pyzara";
 
 async function openWhats(phone, message = WHATSAPP_MSG) {
   try {
     const clean = String(phone).replace(/[^\d+]/g, "");
     const appUrl = `whatsapp://send?phone=${clean}&text=${encodeURIComponent(
-      message
+      message,
     )}`;
     const webUrl = `https://wa.me/${clean.replace(
       /^\+/,
-      ""
+      "",
     )}?text=${encodeURIComponent(message)}`;
     const can = await Linking.canOpenURL(appUrl);
     if (can) return Linking.openURL(appUrl);
@@ -119,7 +119,7 @@ const SearchBar = ({ onOpenSupport }) => {
     const fetchSuggestions = async () => {
       try {
         const res = await axios.get(
-          `${SummaryApi.searchSuggestion.url}?q=${searchQuery}`
+          `${SummaryApi.searchSuggestion.url}?q=${searchQuery}`,
         );
         if (res.data.success) {
           setSuggestions(res.data.data);
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingRight: 40,
     backgroundColor: "#fff",
-    width: '88%',
+    width: "88%",
   },
   input: {
     flex: 1,
