@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "EGtake",
+    "name": "Pyzara",
     "slug": "test-eas-upload",
     "version": "5.0.0",
     "orientation": "portrait",
@@ -18,9 +18,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.emamexp2.testeasupload",
-      "permissions": [
-        "CAMERA"
-      ],
+      "permissions": ["CAMERA"],
       "blockedPermissions": [
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
