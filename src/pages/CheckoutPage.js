@@ -383,16 +383,24 @@ const CheckoutPage = () => {
           .filter((item) => item._id && !item?.isStoreData)
           .map((item) => item._id);
 
-        await Promise.all(
-          selectedItems.map((item) =>
-            updateProductStock(
-              item.productId._id,
-              item.image,
-              item.size,
-              item.quantity
-            )
-          )
-        );
+        // await Promise.all(
+        //   selectedItems.map((item) =>
+        //     updateProductStock(
+        //       item.productId._id,
+        //       item.image,
+        //       item.size,
+        //       item.quantity
+        //     )
+        //   )
+        // );
+        for (const item of selectedItems) {
+         await updateProductStock(
+         item.productId,
+         item.image,
+         item.size,
+         item.quantity
+         );
+        }
 
         if (couponCode && discount > 0) {
           try {
@@ -892,7 +900,7 @@ const CheckoutPage = () => {
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.labelText}>Handling Charge</Text>
+            <Text style={styles.labelText}>Handling Charge(Internal cost±)</Text>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
@@ -902,7 +910,7 @@ const CheckoutPage = () => {
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.labelText}>Processing Fee</Text>
+            <Text style={styles.labelText}>Processing Fee(server, apps, etc±)</Text>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >

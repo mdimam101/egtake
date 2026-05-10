@@ -26,7 +26,8 @@ const UserSlideProductCard = ({
 
   const imgUri = ensureHttps(productData?.img);
   //api  return true
-  const isFreeCampaing = true;
+  //TBD
+  const isFreeCampaing = false;
   const deviceId = false;
   const userAlreadyPurchase = false;
   let isPurchese = deviceId || userAlreadyPurchase;

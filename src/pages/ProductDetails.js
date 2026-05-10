@@ -817,7 +817,7 @@ const ProductDetails = ({ route }) => {
 
           <View style={styles.policyCard}>
             <LinearGradient
-              colors={["#FFF39C", "#fdfdfdff"]} // উপরে গাঢ়, নিচে হালকা
+              colors={["#dfefd2ff", "#fdfdfdff"]} // উপরে গাঢ়, নিচে হালকা
               style={styles.commitHeaderWrapper}
             >
               <Text style={styles.commitHeaderText}>EGtake Commitment</Text>

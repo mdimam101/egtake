@@ -186,7 +186,7 @@ const HomePage = () => {
         if (needUpdate) {
           await AsyncStorage.setItem(
             "productListCache",
-            JSON.stringify(newData)
+            JSON.stringify(newData),
           );
 
           const optimized = generateOptimizedVariants(newData);
@@ -301,7 +301,7 @@ const HomePage = () => {
   useEffect(() => {
     if (optimizedProducts.length > 0) {
       const task = InteractionManager.runAfterInteractions(() =>
-        sortProductsByUserInterest(optimizedProducts).then(setSortedProducts)
+        sortProductsByUserInterest(optimizedProducts).then(setSortedProducts),
       );
       return () => task.cancel?.();
     }
@@ -385,7 +385,7 @@ const HomePage = () => {
     useCallback(() => {
       setPressedIds({});
       return () => {};
-    }, [])
+    }, []),
   );
 
   const pressGuard = useCallback(
@@ -395,7 +395,7 @@ const HomePage = () => {
       setPressedIds((prev) => ({ ...prev, [id]: true }));
       return true;
     },
-    [pressedIds]
+    [pressedIds],
   );
 
   // ============== DERIVED LISTS ==============
@@ -408,15 +408,16 @@ const HomePage = () => {
     ? selectedCategory === "_trending"
       ? trendingFromStore
       : selectedCategory === "_below99"
-      ? under99FromStore
-      : selectedCategory === "_handcraft"
-      ? handFromStore
-      : selectedCategory === "_sales"
-      ? salesFromStore
-      : sortedProducts.filter(
-          (item) =>
-            item.category?.toLowerCase() === selectedCategory?.toLowerCase()
-        )
+        ? under99FromStore
+        : selectedCategory === "_handcraft"
+          ? handFromStore
+          : selectedCategory === "_sales"
+            ? salesFromStore
+            : sortedProducts.filter(
+                (item) =>
+                  item.category?.toLowerCase() ===
+                  selectedCategory?.toLowerCase(),
+              )
     : sortedProducts;
 
   const totalLength = selectedCategory
@@ -454,10 +455,10 @@ const HomePage = () => {
     item?.cardKey
       ? item.cardKey
       : item?._id
-      ? `${item._id}::${item?.img || ""}::${item?.variantColor || ""}::${
-          item?.variantSize || ""
-        }::${index}`
-      : `last_${index}`;
+        ? `${item._id}::${item?.img || ""}::${item?.variantColor || ""}::${
+            item?.variantSize || ""
+          }::${index}`
+        : `last_${index}`;
 
   const renderSlide = (rawName) => {
     // ছোট alias, চাইলে এটা বাদও দিতে পারো যদি সবসময় ঠিক key পাঠাও
@@ -467,23 +468,23 @@ const HomePage = () => {
       slideName === "salesSlide"
         ? salesProducts
         : slideName === "handCraft"
-        ? handProducts
-        : slideName === "trending"
-        ? trendingProducts
-        : slideName === "under99"
-        ? under99Products
-        : null;
+          ? handProducts
+          : slideName === "trending"
+            ? trendingProducts
+            : slideName === "under99"
+              ? under99Products
+              : null;
 
     const selectCat =
       slideName === "salesSlide"
         ? "_sales"
         : slideName === "handCraft"
-        ? "_handcraft"
-        : slideName === "trending"
-        ? "_trending"
-        : slideName === "under99"
-        ? "_below99"
-        : null;
+          ? "_handcraft"
+          : slideName === "trending"
+            ? "_trending"
+            : slideName === "under99"
+              ? "_below99"
+              : null;
 
     if (loading) {
       return (
@@ -586,10 +587,10 @@ const HomePage = () => {
             {selectedCategory === "_trending"
               ? "🔥 All Trending Products"
               : selectedCategory === "_below99"
-              ? "💸 All 0~199 Products"
-              : selectedCategory === "_handcraft"
-              ? "🧵 All Hand Craft Products"
-              : "💥 All Sales Products"}
+                ? "💸 All 0~199 Products"
+                : selectedCategory === "_handcraft"
+                  ? "🧵 All Hand Craft Products"
+                  : "💥 All Sales Products"}
           </Text>
         </View>
       ) : (

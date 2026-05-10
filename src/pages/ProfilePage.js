@@ -104,11 +104,11 @@ async function openWhats(phone, message = WHATSAPP_MSG) {
   try {
     const clean = String(phone).replace(/[^\d+]/g, "");
     const appUrl = `whatsapp://send?phone=${clean}&text=${encodeURIComponent(
-      message
+      message,
     )}`;
     const webUrl = `https://wa.me/${clean.replace(
       /^\+/,
-      ""
+      "",
     )}?text=${encodeURIComponent(message)}`;
     const can = await Linking.canOpenURL(appUrl);
     if (can) return Linking.openURL(appUrl);
@@ -332,7 +332,7 @@ const SupportRow = ({ icon, title, subtitle, onPress, right }) => (
 );
 
 // 🆕 Support bottom sheet
-const SupportSheet = ({ visible,supportPhone,whatsAppPhn, onClose }) => (
+const SupportSheet = ({ visible, supportPhone, whatsAppPhn, onClose }) => (
   <Modal
     visible={visible}
     transparent
@@ -529,7 +529,9 @@ const OrderItemRow = ({
           ) : null}
           <Text style={styles.itemMeta}>Qty: {item?.quantity || 1}</Text>
           <Text style={styles.itemMeta}>Price: {item?.price ?? "-"}</Text>
-          <Text style={styles.itemMeta}>product Code : {item?.productCodeNumber ?? "-"}</Text>
+          <Text style={styles.itemMeta}>
+            product Code : {item?.productCodeNumber ?? "-"}
+          </Text>
         </View>
       </View>
 
@@ -599,8 +601,8 @@ const ProfilePage = () => {
   const [cancelAskId, setCancelAskId] = useState(null);
 
   const commonInfo = useSelector((s) => s.commonState.commonInfoList);
-    const SUPPORT_PHONE = commonInfo[0]?.whatsAppNumber;
-    const WHATSAPP_PHONE = commonInfo[0]?.supportCallNumber;
+  const SUPPORT_PHONE = commonInfo[0]?.whatsAppNumber;
+  const WHATSAPP_PHONE = commonInfo[0]?.supportCallNumber;
 
   // Fetch Orders
   const fetchUserOrders = useCallback(async () => {
@@ -643,7 +645,7 @@ const ProfilePage = () => {
   const filteredOrders = useMemo(() => {
     const base = [...orders].sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
     if (selectedTab === "Pending") {
@@ -652,7 +654,7 @@ const ProfilePage = () => {
 
     if (selectedTab === "Shipping") {
       return base.filter((o) =>
-        [ORDER_STATUS.CONFIRMED, ORDER_STATUS.SHIPPED].includes(o.status)
+        [ORDER_STATUS.CONFIRMED, ORDER_STATUS.SHIPPED].includes(o.status),
       );
     }
 
@@ -662,7 +664,7 @@ const ProfilePage = () => {
         .map((o) => ({
           ...o,
           items: (o.items || []).filter(
-            (it) => it.itemStatus !== ITEM_STATUS.RETURN_CONFIRMED
+            (it) => it.itemStatus !== ITEM_STATUS.RETURN_CONFIRMED,
           ),
         }))
         .filter((o) => (o.items || []).length > 0);
@@ -673,7 +675,7 @@ const ProfilePage = () => {
         .map((o) => ({
           ...o,
           items: (o.items || []).filter(
-            (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED
+            (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED,
           ),
         }))
         .filter((o) => (o.items || []).length > 0);
@@ -685,7 +687,7 @@ const ProfilePage = () => {
         .map((o) => ({
           ...o,
           items: (o.items || []).filter(
-            (it) => it.reviewStatus === REVIEW_STATUS.CONFIRMED
+            (it) => it.reviewStatus === REVIEW_STATUS.CONFIRMED,
           ),
         }))
         .filter((o) => (o.items || []).length > 0);
@@ -761,24 +763,32 @@ const ProfilePage = () => {
         `${SummaryApi.cancel_user_order.url}/${orderId}`,
         {
           withCredentials: true,
-        }
+        },
       );
       if (res.data?.success) {
         setOrders((prev) => prev.filter((o) => o._id !== orderId));
         Toast.show({ type: "success", text1: "Order cancelled" });
         // product stock update
-         await Promise.all(
-                  item.map((item) =>
-                    updateProductStock(
-                      item.productId,
-                      item.image,
-                      item.size,
-                      item.quantity,
-                      true
-                    )
-                  )
-                );
-        
+        //  await Promise.all(
+        //           item.map((item) =>
+        //             updateProductStock(
+        //               item.productId,
+        //               item.image,
+        //               item.size,
+        //               item.quantity,
+        //               true
+        //             )
+        //           )
+        //         );
+        for (const itm of item) {
+          await updateProductStock(
+            itm.productId,
+            itm.image,
+            itm.size,
+            itm.quantity,
+            true,
+          );
+        }
       } else {
         Toast.show({
           type: "error",
@@ -795,13 +805,13 @@ const ProfilePage = () => {
       const res = await axios.put(
         `${SummaryApi.return_user_order.url}/${orderId}`,
         {},
-        { withCredentials: true }
+        { withCredentials: true },
       );
       if (res.data?.success) {
         setOrders((prev) =>
           prev.map((o) =>
-            o._id === orderId ? { ...o, status: ORDER_STATUS.RETURN } : o
-          )
+            o._id === orderId ? { ...o, status: ORDER_STATUS.RETURN } : o,
+          ),
         );
         Toast.show({ type: "success", text1: "Return requested" });
       } else {
@@ -820,7 +830,7 @@ const ProfilePage = () => {
       const res = await axios.put(
         `${SummaryApi.return_user_order_item.url}/${orderId}/${itemId}`,
         {},
-        { withCredentials: true }
+        { withCredentials: true },
       );
       if (res.data?.success) {
         setOrders((prev) =>
@@ -831,11 +841,11 @@ const ProfilePage = () => {
                   items: o.items.map((it) =>
                     it._id === itemId
                       ? { ...it, itemStatus: ITEM_STATUS.RETURN_PENDING }
-                      : it
+                      : it,
                   ),
                 }
-              : o
-          )
+              : o,
+          ),
         );
         Toast.show({ type: "success", text1: "Item marked for return" });
       } else {
@@ -863,15 +873,15 @@ const ProfilePage = () => {
   const stats = useMemo(() => {
     const all = orders.length;
     const delivered = orders.filter(
-      (o) => o.status === ORDER_STATUS.DELIVERED
+      (o) => o.status === ORDER_STATUS.DELIVERED,
     ).length;
     const returnConfirmed = orders.reduce(
       (acc, o) =>
         acc +
         (o.items || []).filter(
-          (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED
+          (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED,
         ).length,
-      0
+      0,
     );
     return { all, delivered, returnConfirmed };
   }, [orders]);
@@ -909,7 +919,9 @@ const ProfilePage = () => {
             Ship to:{" "}
             <Text style={styles.orderMetaValue}>
               {(ship.address || "-") +
-                (ship.district ? `, ${ship.district}, ${ship?.upazila ? ship?.upazila : ''}` : "")}
+                (ship.district
+                  ? `, ${ship.district}, ${ship?.upazila ? ship?.upazila : ""}`
+                  : "")}
             </Text>
           </Text>
           <Text style={styles.orderMetaText}>
@@ -1001,7 +1013,12 @@ const ProfilePage = () => {
               {isPending ? (
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: "#d32f2f" }]}
-                  onPress={() => setCancelAskId({orderId:order._id, orderItems:order.items})} // ✅ আগে modal খুলবে
+                  onPress={() =>
+                    setCancelAskId({
+                      orderId: order._id,
+                      orderItems: order.items,
+                    })
+                  } // ✅ আগে modal খুলবে
                 >
                   <Text style={styles.actionBtnText}>Cancel</Text>
                 </TouchableOpacity>
@@ -1229,8 +1246,8 @@ const ProfilePage = () => {
       {/* 🆕 Support Sheet */}
       <SupportSheet
         visible={supportOpen}
-        supportPhone =  {SUPPORT_PHONE}
-        whatsAppPhn = {WHATSAPP_PHONE}
+        supportPhone={SUPPORT_PHONE}
+        whatsAppPhn={WHATSAPP_PHONE}
         onClose={() => setSupportOpen(false)}
       />
 

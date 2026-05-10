@@ -4,7 +4,7 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 const TIERS = ["normal", "good", "premium", "luxury"];
 const LABELS = ["Normal", "Good", "Premium", "Luxury"];
-const ICONS  = ["●", "★", "✨", "👑"];
+const ICONS = ["●", "★", "✨", "👑"];
 
 // Colors
 const GREEN = "#1E8E3E";
@@ -45,7 +45,7 @@ export default function ProductQualityViz({
           easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     // label bounce
@@ -59,18 +59,27 @@ export default function ProductQualityViz({
   }, [activeIndex, pulse, labelScale]);
 
   const micro =
-    activeIndex === 0 ? "● Made for daily use — reliable basics." :
-    activeIndex === 1 ? "★ Good materials and cleaner finishing." :
-    activeIndex === 2 ? "✨ High-quality materials with better finishing and \n　　comfortable." :
-                        "👑 Super high-quality materials with careful,\n　　expert finishing.";
+    activeIndex === 0
+      ? "● Made for daily use — reliable basics."
+      : activeIndex === 1
+        ? "★ Good materials and cleaner finishing."
+        : activeIndex === 2
+          ? "✨ High-quality materials with better finishing and \n　　comfortable."
+          : "👑 Super high-quality materials with careful,\n　　expert finishing.";
 
   // halo anim values
-  const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1.2] });
-  const haloOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0.3] });
+  const haloScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 1.2],
+  });
+  const haloOpacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 0.3],
+  });
 
   return (
     <View style={[styles.card, style]}>
-      <Text style={styles.heading}>Quality Visualization</Text>
+      <Text style={styles.heading}>Quality Verified</Text>
 
       {/* Track: revert to old segmented style (static fill per segment) */}
       <View style={styles.trackWrap}>
@@ -100,7 +109,9 @@ export default function ProductQualityViz({
             return (
               <View key={`stop-${idx}`} style={styles.stopCell}>
                 {/* Dot with pulsing halo only for active */}
-                <View style={{ alignItems: "center", justifyContent: "center" }}>
+                <View
+                  style={{ alignItems: "center", justifyContent: "center" }}
+                >
                   {isActive && (
                     <Animated.View
                       style={{
@@ -153,14 +164,14 @@ export default function ProductQualityViz({
 const styles = StyleSheet.create({
   // premium-looking card
   card: {
-    padding:10,
-    borderRadius: 14,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: "#fefff5ff",
     shadowColor: "#000",
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    elevation: 1,
     gap: 8,
   },
   heading: { fontSize: 16, fontWeight: "700", color: "#1C1D1F" },
@@ -184,7 +195,12 @@ const styles = StyleSheet.create({
   },
   stopCell: { width: "25%", alignItems: "center" },
   stopDot: { width: 12, height: 12, borderRadius: 999, borderWidth: 2 },
-  stopLabel: { marginTop: 6, fontSize: 12, fontWeight: "700", letterSpacing: 0.2 },
+  stopLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
 
   micro: { marginTop: 8, color: "#3A3D40", fontSize: 13 },
 });

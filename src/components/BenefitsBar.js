@@ -36,7 +36,7 @@ export default function BenefitsBar({
 
       <BenefitItem
         iconSource={ICONS.points}
-        title={'comming soon'}//{"Purchase and\nEarn point"}
+        title={"comming soon"} //{"Purchase and\nEarn point"}
         onPress={onPressPoints}
       />
     </View>
@@ -81,14 +81,14 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     justifyContent: "space-between",
     backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
+    borderRadius: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+    shadowColor: "#9cc77fff",
+    shadowOpacity: 0.4,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 3,
+    elevation: 1,
   },
   item: {
     flex: 1,
