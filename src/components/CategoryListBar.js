@@ -16,7 +16,7 @@ const CategoryListBar = ({ onSelectCategory /*subCategory = "ALL"}*/ }) => {
   const subCategory = "ALL"; // next i will solve it now just for test
   const [categories, setCategories] = useState([]);
   const getcategoryListFromStore = useSelector(
-    (state) => state.categoryState.categoryList
+    (state) => state.categoryState.categoryList,
   );
   const dispatch = useDispatch();
   const [selected, setSelected] = useState(subCategory);
@@ -25,7 +25,11 @@ const CategoryListBar = ({ onSelectCategory /*subCategory = "ALL"}*/ }) => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(SummaryApi.category_product.url);
+      const res = await axios.get(SummaryApi.category_product.url, {
+        headers: {
+          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+        },
+      });
       if (res.data.success) {
         const categoryList = res.data.data || [];
         // setCategory in store

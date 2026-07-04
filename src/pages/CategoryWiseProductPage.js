@@ -19,7 +19,10 @@ const CategoryWiseProductPage = ({ route }) => {
         method: SummaryApi.category_wish_product.method,
         url: SummaryApi.category_wish_product.url,
         data: { category: categoryName },
-        headers: { "content-type": "application/json" },
+        headers: {
+          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+          "content-type": "application/json",
+        },
       });
 
       if (res.data.success) {

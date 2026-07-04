@@ -65,9 +65,9 @@ const CartPage = () => {
       const cacheArr = raw ? JSON.parse(raw) : [];
       if (cacheArr.length > 0) {
         setCartItems(cacheArr); // 👈 cache দেখালাম
-      } 
-      if(cacheArr.length === 0) {
-        setCartItems([])
+      }
+      if (cacheArr.length === 0) {
+        setCartItems([]);
       }
 
       // 2) guest হলে এখানেই শেষ
@@ -93,7 +93,11 @@ const CartPage = () => {
   // check latest product for quantity check
   const fetchLatestProducts = async () => {
     try {
-      const response = await axios.get(SummaryApi.get_product.url);
+      const response = await axios.get(SummaryApi.get_product.url, {
+        headers: {
+          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+        },
+      });
       if (response.data.success) {
         setLatestProducts(response.data.data);
       }
@@ -114,13 +118,13 @@ const CartPage = () => {
         if (!latest) return;
 
         const variant = latest.variants.find(
-          (v) => v.images?.[0] === item.image
+          (v) => v.images?.[0] === item.image,
         );
         if (!variant) return;
 
         const sizeKey = (item.size || "").trim().toLowerCase();
         const sizeObj = variant.sizes.find(
-          (s) => (s.size || "").trim().toLowerCase() === sizeKey
+          (s) => (s.size || "").trim().toLowerCase() === sizeKey,
         );
 
         const stock = sizeObj?.stock || 0;
@@ -133,7 +137,7 @@ const CartPage = () => {
       setUnselectedItems(newUnselected);
       AsyncStorage.setItem(
         "unselected_cart_ids",
-        JSON.stringify(newUnselected)
+        JSON.stringify(newUnselected),
       );
     };
 
@@ -156,26 +160,30 @@ const CartPage = () => {
 
     if (item.size && item.size.trim() !== "") {
       const sizeObj = variant.sizes.find(
-        (s) => (s.size || "").toLowerCase() === (item.size || "").toLowerCase()
+        (s) => (s.size || "").toLowerCase() === (item.size || "").toLowerCase(),
       );
       if (!sizeObj || sizeObj.stock === 0) return { inStock: false };
-      let actualPrice = variant?.SpcSelling ? variant?.SpcSelling : item.productId.selling;
+      let actualPrice = variant?.SpcSelling
+        ? variant?.SpcSelling
+        : item.productId.selling;
       return {
         inStock: true,
-        price: actualPrice//item.productId.selling || item.productId.price,
+        price: actualPrice, //item.productId.selling || item.productId.price,
       };
     } else {
       const totalStock = variant.sizes.reduce(
         (sum, s) => sum + (s.stock || 0),
-        0
+        0,
       );
       if (totalStock === 0) return { inStock: false };
-      let actualPrice = variant?.SpcSelling ? variant?.SpcSelling : item.productId.selling;
+      let actualPrice = variant?.SpcSelling
+        ? variant?.SpcSelling
+        : item.productId.selling;
       // console.log("actualPrice....", actualPrice);
-      
+
       return {
         inStock: true,
-        price: actualPrice//item.productId.selling || item.productId.price,
+        price: actualPrice, //item.productId.selling || item.productId.price,
       };
     }
   };
@@ -225,7 +233,7 @@ const CartPage = () => {
     setUnselectedItems(updatedUnselected);
     await AsyncStorage.setItem(
       "unselected_cart_ids",
-      JSON.stringify(updatedUnselected)
+      JSON.stringify(updatedUnselected),
     );
   };
 

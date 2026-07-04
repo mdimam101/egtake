@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -19,7 +18,7 @@ const SubCategoryWiseProduct = ({ route }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const getAllProductFromStore = useSelector(
-    (state) => state.productState.productList
+    (state) => state.productState.productList,
   );
 
   // ✅ Scroll fix: keep a ref to ScrollView and a key to force remount
@@ -32,6 +31,7 @@ const SubCategoryWiseProduct = ({ route }) => {
         url: SummaryApi.category_wish_product.url,
         method: SummaryApi.category_wish_product.method,
         headers: {
+          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
           "content-type": "application/json",
         },
         data: {
@@ -52,7 +52,7 @@ const SubCategoryWiseProduct = ({ route }) => {
     if (selectedCategory) {
       const categoryWise = getAllProductFromStore.filter(
         (item) =>
-          item.category?.toLowerCase() === selectedCategory.toLowerCase()
+          item.category?.toLowerCase() === selectedCategory.toLowerCase(),
       );
 
       const prioritizeProducts = async () => {
@@ -130,7 +130,7 @@ const SubCategoryWiseProduct = ({ route }) => {
       {/* 🔹 Product grid section */}
       <ScrollView
         key={`sv-${selectedCategory ?? "all"}-${subCategory}-${svKey}`} // ✅ re-mount per change
-        ref={scrollRef}                                                // ✅ control scroll
+        ref={scrollRef} // ✅ control scroll
         contentContainerStyle={styles.gridContainer}
         showsVerticalScrollIndicator={false}
       >
@@ -170,7 +170,7 @@ const SubCategoryWiseProduct = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-   backgroundColor: "#F2F2F2",
+    backgroundColor: "#F2F2F2",
     // backfaceVisibility: "#fff",
     paddingTop: 90 - 10,
     // marginBottom:44

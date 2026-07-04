@@ -1,4 +1,4 @@
-const BASE_URL = "https://api.pyzara.com"; //"https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com"//// 'https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com' //"https://ecommerce-project-swart-five.vercel.app" //"http://192.168.3.4:8080"// "http://192.168.3.4:8080"// "https://ecommerce-project-mbcd.vercel.app"//
+const BASE_URL = "https://api.pyzara.com"; // "http://192.168.3.6:8080"; // "https://api.pyzara.com"; // "https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com"//// 'https://e4imbebbpb.execute-api.ap-southeast-1.amazonaws.com' //"https://ecommerce-project-swart-five.vercel.app" //"http://192.168.3.4:8080"// "http://192.168.3.4:8080"// "https://ecommerce-project-mbcd.vercel.app"//
 const SummaryApi = {
   signUp: {
     url: `${BASE_URL}/api/signup`,
@@ -130,11 +130,11 @@ const SummaryApi = {
     method: "post",
   },
 
+  // login with google
   google_login: {
-    url: `${BASE_URL}/auth/google`,
-    method: "post",
+    url: `${BASE_URL}/api/google-login`,
+    method: "POST",
   },
-
   // 🔐 Phone OTP
   auth_request_otp: {
     url: `${BASE_URL}/api/auth/request-otp`,
@@ -175,6 +175,34 @@ const SummaryApi = {
   get_common_info: {
     url: `${BASE_URL}/api/get-common-info`,
     method: "get",
+  },
+  googleLogin: {
+    url: `${BASE_URL}/api/google-login`,
+    method: "POST",
+  },
+  ai_size_recommend: {
+    url: `${BASE_URL}/api/ai-size-recommend`,
+    method: "POST",
+  },
+  ai_skin_recommend: {
+    url: `${BASE_URL}/api/ai-skincare-recommend`,
+    method: "POST",
+  },
+
+  // review img upload
+  media_presigned_upload: {
+    url: `${BASE_URL}/api/media/presigned-upload`,
+    method: "POST",
+  },
+
+  media_confirm_upload: {
+    url: `${BASE_URL}/api/media/confirm-upload`,
+    method: "POST",
+  },
+
+  delete_media: {
+    url: `${BASE_URL}/api/media`,
+    method: "delete",
   },
 };
 

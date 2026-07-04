@@ -13,7 +13,15 @@ import {
 //import * as ImagePicker from "expo-image-picker";       // your Cloudinary helper
 import InAppCameraSheet from "../components/InAppCameraSheet"; // ⬅️ your in-app camera
 
-const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, orderId, itemId }) => {
+const ReviewModal = ({
+  visible,
+  onClose,
+  onSubmit,
+  productName,
+  productId,
+  orderId,
+  itemId,
+}) => {
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
   const [images, setImages] = useState([]); // [{ uri, uploading, uploadedUrl }]
@@ -23,7 +31,11 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
   const renderStars = () => (
     <View style={{ flexDirection: "row", marginVertical: 5 }}>
       {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity key={star} onPress={() => setRating(star)} style={{ padding: 2 }}>
+        <TouchableOpacity
+          key={star}
+          onPress={() => setRating(star)}
+          style={{ padding: 2 }}
+        >
           <Ionicons
             name={star <= rating ? "star" : "star-outline"}
             size={28}
@@ -68,7 +80,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
     setImages((prev) => prev.filter((img) => img.uri !== uri));
   };
 
- const handleSubmit = () => {
+  const handleSubmit = () => {
     // if (!productId) {
     //   Alert.alert("Product missing", "Product ID পাওয়া যায়নি, আবার চেষ্টা করুন।");
     //   return;
@@ -78,7 +90,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
     //   return;
     // }
 
-    const uploadedUrls = images.map(i => i.uploadedUrl).filter(Boolean);
+    const uploadedUrls = images.map((i) => i.uploadedUrl).filter(Boolean);
 
     onSubmit({
       text: reviewText.trim(),
@@ -97,7 +109,6 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
     onClose();
   };
 
-
   // 🎥 InAppCameraSheet থেকে তোলা ছবির URL পেলে images-এ পুশ
   const handleCameraTaken = (url) => {
     if (!url) return;
@@ -108,7 +119,12 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>Write a Review</Text>
@@ -126,13 +142,21 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {images.map((img, idx) => (
               <View key={`${img.uri}-${idx}`} style={styles.imageWrapper}>
-                <Image source={{ uri: img.uploadedUrl || img.uri }} style={styles.image} />
+                <Image
+                  source={{ uri: img.uploadedUrl || img.uri }}
+                  style={styles.image}
+                />
                 {img.uploading && (
                   <View style={styles.uploadingOverlay}>
-                    <Text style={{ color: "#fff", fontSize: 10 }}>Uploading...</Text>
+                    <Text style={{ color: "#fff", fontSize: 10 }}>
+                      Uploading...
+                    </Text>
                   </View>
                 )}
-                <TouchableOpacity onPress={() => removeImage(img.uri)} style={styles.deleteBtn}>
+                <TouchableOpacity
+                  onPress={() => removeImage(img.uri)}
+                  style={styles.deleteBtn}
+                >
                   <Ionicons name="close" size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -147,7 +171,10 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
             </TouchableOpacity> */}
 
             {/* ⬇️ তোমার দেওয়া pattern: showCam + InAppCameraSheet */}
-            <TouchableOpacity style={styles.pickBtn} onPress={() => setShowCam(true)}>
+            <TouchableOpacity
+              style={styles.pickBtn}
+              onPress={() => setShowCam(true)}
+            >
               <Ionicons name="camera" size={20} color="#fff" />
               <Text style={styles.pickBtnText}>Take Photo</Text>
             </TouchableOpacity>
@@ -155,10 +182,16 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
 
           {/* Actions */}
           <View style={styles.actionRow}>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#999" }]} onPress={onClose}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: "#999" }]}
+              onPress={onClose}
+            >
               <Text style={styles.actionText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#1976d2" }]} onPress={handleSubmit}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: "#1976d2" }]}
+              onPress={handleSubmit}
+            >
               <Text style={styles.actionText}>Submit</Text>
             </TouchableOpacity>
           </View>
@@ -173,6 +206,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, productName, productId, order
           setShowCam(false);
           handleCameraTaken(url); // push into images[]
         }}
+        productId={productId}
       />
     </Modal>
   );

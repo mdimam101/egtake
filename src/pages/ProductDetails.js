@@ -1,5 +1,4 @@
 // ✅ Final best-practice version with scroll-to-top and slide-in behavior + shipping info
-import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import {
   useCallback,
@@ -18,6 +17,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -44,7 +44,7 @@ import { trackBasic } from "../helper/trackBasic";
 
 import { Image as ExpoImage } from "expo-image";
 
-import { CommonActions } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import BenefitsBar from "../components/BenefitsBar";
 import ProductQualityViz from "../components/ProductQualityBlock";
 import ProductVideoSection from "../components/ProductVideoSection";
@@ -123,6 +123,17 @@ const ProductDetails = ({ route }) => {
 
   // review details
   const [reviews, setReviews] = useState([]); // ← আগের undefined থেকে [] করলাম
+
+  // AI size recommend states
+  const [showAiSizeBox, setShowAiSizeBox] = useState(false);
+  const [heightFeet, setHeightFeet] = useState("");
+  const [heightInch, setHeightInch] = useState("");
+  const [weight, setWeight] = useState("");
+  const [waist, setWaist] = useState("");
+  const [fitPreference, setFitPreference] = useState("regular");
+  const [aiSizeLoading, setAiSizeLoading] = useState(false);
+  const [aiSizeError, setAiSizeError] = useState("");
+  const [aiSizeResult, setAiSizeResult] = useState(null);
 
   const previewReviews = useMemo(
     () => (Array.isArray(reviews) ? reviews.slice(0, 3) : []),
@@ -263,7 +274,10 @@ const ProductDetails = ({ route }) => {
         const res = await axios({
           method: SummaryApi.product_details.method,
           url: SummaryApi.product_details.url,
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+            "Content-Type": "application/json",
+          },
           data: { productId: id },
         });
 
@@ -392,6 +406,84 @@ const ProductDetails = ({ route }) => {
         trackBasic("add_to_cart", { subCategory: data?.subCategory, count: 1 });
         //Toast.show({ type: "success", text1: "Added to cart" });
       }
+    }
+  };
+
+  const handleAiSizeSubmit = async () => {
+    if (!heightFeet || !weight) {
+      setAiSizeError("উচ্চতা এবং ওজন অবশ্যই দিতে হবে।");
+      return;
+    }
+
+    if (!Array.isArray(data?.sizeDetails) || data.sizeDetails.length === 0) {
+      setAiSizeError("এই product এর size chart পাওয়া যায়নি।");
+      return;
+    }
+
+    setAiSizeLoading(true);
+    setAiSizeError("");
+    setAiSizeResult(null);
+
+    const cleanSizeChart = data.sizeDetails.map((item) => ({
+      size: item.size,
+      chest: Number(item.chest || 0),
+      length: Number(item.length || 0),
+      shoulder: Number(item.shoulder || 0),
+      sleeve: Number(item.sleeve || 0),
+      unit: item.unit === "inche" ? "inch" : item.unit || "inch",
+    }));
+
+    const totalHeightInch =
+      Number(heightFeet || 0) * 12 + Number(heightInch || 0);
+
+    const payload = {
+      productName: data?.productName || "",
+      category: data?.category || "",
+      productType: data?.subCategory || data?.category || "",
+
+      sizeChart: cleanSizeChart,
+
+      customerInfo: {
+        heightFeet: Number(heightFeet),
+        heightInch: Number(heightInch || 0),
+        totalHeightInch,
+        weight: Number(weight),
+        waist: waist ? Number(waist) : null,
+      },
+
+      fitPreference: fitPreference || "regular",
+    };
+
+    console.log("FINAL AI PAYLOAD:", payload);
+
+    try {
+      const response = await axios.post(
+        SummaryApi.ai_size_recommend.url,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        },
+      );
+
+      const result = response?.data;
+      console.log("AI size response:", result);
+
+      if (!result?.success) {
+        throw new Error(result?.message || "AI size suggestion failed");
+      }
+
+      setAiSizeResult(result?.data || null);
+    } catch (error) {
+      setAiSizeError(
+        error?.response?.data?.message ||
+          error?.message ||
+          "AI size suggestion failed",
+      );
+    } finally {
+      setAiSizeLoading(false);
     }
   };
 
@@ -804,6 +896,223 @@ const ProductDetails = ({ route }) => {
           </View>
         )}
 
+        {/* AI Size Recommend */}
+        {Array.isArray(data?.sizeDetails) && data.sizeDetails.length > 0 && (
+          <View style={styles.aiSizeWrap}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.aiSizeToggleBtn}
+              onPress={() => setShowAiSizeBox((prev) => !prev)}
+            >
+              <View style={styles.aiSizeToggleLeft}>
+                <Ionicons name="sparkles-outline" size={18} color="#0f5132" />
+
+                <View>
+                  <Text style={styles.aiSizeToggleTitle}>AI Size Helper</Text>
+                  <Text style={styles.aiSizeToggleSub}>
+                    আপনার height/weight দিয়ে best size খুঁজুন
+                  </Text>
+                </View>
+              </View>
+
+              <Ionicons
+                name={showAiSizeBox ? "chevron-up" : "chevron-down"}
+                size={20}
+                color="#0f5132"
+              />
+            </TouchableOpacity>
+
+            {showAiSizeBox && (
+              <View style={styles.aiSizeForm}>
+                <View style={styles.aiSizeRow}>
+                  <View style={styles.aiSizeField}>
+                    <Text style={styles.aiSizeLabel}>আপনার উচ্চতা</Text>
+
+                    <View style={styles.aiHeightGroup}>
+                      <View style={styles.aiInputWithUnit}>
+                        <TextInput
+                          style={styles.aiSizeInputWithUnit}
+                          value={heightFeet}
+                          onChangeText={setHeightFeet}
+                          placeholder="0"
+                          placeholderTextColor="#9ca3af"
+                          keyboardType="numeric"
+                          maxLength={1}
+                        />
+                        <Text style={styles.aiInputUnit}>ft</Text>
+                      </View>
+
+                      <View style={styles.aiInputWithUnit}>
+                        <TextInput
+                          style={styles.aiSizeInputWithUnit}
+                          value={heightInch}
+                          onChangeText={setHeightInch}
+                          placeholder="0"
+                          placeholderTextColor="#9ca3af"
+                          keyboardType="numeric"
+                          maxLength={2}
+                        />
+                        <Text style={styles.aiInputUnit}>in</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.aiSizeField}>
+                    <Text style={styles.aiSizeLabel}>আপনার ওজন (kg)</Text>
+
+                    <View style={styles.aiInputWithUnit}>
+                      <TextInput
+                        style={styles.aiSizeInputWithUnit}
+                        value={weight}
+                        onChangeText={setWeight}
+                        placeholder="যেমন: 65"
+                        placeholderTextColor="#9ca3af"
+                        keyboardType="numeric"
+                      />
+                      <Text style={styles.aiInputUnit}>kg</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.aiSizeFieldFull}>
+                  <Text style={styles.aiSizeLabel}>
+                    কোমরের মাপ (inch){" "}
+                    <Text style={styles.aiSizeOptional}>Optional</Text>
+                  </Text>
+
+                  <View style={styles.aiInputWithUnit}>
+                    <TextInput
+                      style={styles.aiSizeInputWithUnit}
+                      value={waist}
+                      onChangeText={setWaist}
+                      placeholder="যেমন: 32"
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.aiInputUnit}>inch</Text>
+                  </View>
+                </View>
+
+                <View style={styles.aiSizeFieldFull}>
+                  <Text style={styles.aiSizeLabel}>আপনি কেমন fit চান?</Text>
+
+                  <View style={styles.fitChipRow}>
+                    {[
+                      { label: "Slim Fit", value: "slim" },
+                      { label: "Regular Fit", value: "regular" },
+                      { label: "Loose Fit", value: "loose" },
+                    ].map((item) => (
+                      <TouchableOpacity
+                        key={item.value}
+                        onPress={() => setFitPreference(item.value)}
+                        style={[
+                          styles.fitChip,
+                          fitPreference === item.value && styles.activeFitChip,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.fitChipText,
+                            fitPreference === item.value &&
+                              styles.activeFitChipText,
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {aiSizeError ? (
+                  <Text style={styles.aiSizeError}>{aiSizeError}</Text>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[
+                    styles.aiSizeSubmitBtn,
+                    aiSizeLoading && styles.aiSizeSubmitBtnDisabled,
+                  ]}
+                  onPress={handleAiSizeSubmit}
+                  disabled={aiSizeLoading}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="sparkles" size={16} color="#fff" />
+
+                  <Text style={styles.aiSizeSubmitText}>
+                    {aiSizeLoading
+                      ? "AI আপনার size suggest করছে..."
+                      : "Find My Size"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {aiSizeResult && (
+              <View style={styles.aiSizeResultCard}>
+                <View style={styles.aiSizeResultTop}>
+                  <Text style={styles.aiSizeResultLabel}>Recommended Size</Text>
+
+                  <Text style={styles.aiSizeResultValue}>
+                    {aiSizeResult.recommendedSize || "-"}
+                  </Text>
+                </View>
+
+                {aiSizeResult.alternativeSize ? (
+                  <Text style={styles.aiSizeAlt}>
+                    Alternative:{" "}
+                    <Text style={styles.aiSizeAltBold}>
+                      {aiSizeResult.alternativeSize}
+                    </Text>
+                  </Text>
+                ) : null}
+
+                {aiSizeResult.fitNote ? (
+                  <Text style={styles.aiSizeNote}>{aiSizeResult.fitNote}</Text>
+                ) : null}
+
+                {aiSizeResult.customerMessage ? (
+                  <View style={styles.aiSizeMessageBox}>
+                    <Text style={styles.aiSizeMessageText}>
+                      {aiSizeResult.customerMessage}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* AI Skin Care Helper */}
+        {/* {(() => {
+          const text = `${data?.category || ""} ${data?.subCategory || ""} ${
+            data?.productName || ""
+          }`.toLowerCase();
+
+          const isSkinCareProduct = [
+            "skin",
+            "skincare",
+            "face",
+            "toner",
+            "serum",
+            "cleanser",
+            "moisturizer",
+            "sunscreen",
+            "cream",
+            "mask",
+            "acne",
+            "bright",
+          ].some((key) => text.includes(key));
+
+          if (!isSkinCareProduct) return null;
+
+          return (
+            <AiSkinCareHelper
+              productData={data}
+              websiteProductList={productDataListfromCache}
+            />
+          );
+        })()} */}
         {/* // Suppose API returns PQualityType in data.qualityType  (normal|good|premium|luxury) */}
         {data.qualityType && (
           <ProductQualityViz
@@ -1616,6 +1925,248 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
+  },
+
+  // ai size style
+  aiSizeWrap: {
+    marginTop: 14,
+    marginHorizontal: 2,
+    borderRadius: 16,
+    backgroundColor: "#f7fff9",
+    borderWidth: 1,
+    borderColor: "#d6f1df",
+    overflow: "hidden",
+  },
+
+  aiSizeToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f0fbf4",
+  },
+
+  aiSizeToggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+
+  aiSizeToggleTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0f5132",
+  },
+
+  aiSizeToggleSub: {
+    marginTop: 2,
+    fontSize: 12,
+    color: "#4d6b5b",
+  },
+
+  aiSizeForm: {
+    padding: 12,
+    gap: 12,
+    backgroundColor: "#fff",
+  },
+
+  aiSizeRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  aiSizeField: {
+    flex: 1,
+  },
+
+  aiSizeFieldFull: {
+    width: "100%",
+  },
+
+  aiSizeLabel: {
+    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+
+  aiSizeOptional: {
+    fontSize: 11,
+    color: "#8a8a8a",
+    fontWeight: "500",
+  },
+
+  aiHeightGroup: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  aiSizeInput: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: "#d9e6dd",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#fafafa",
+    color: "#111827",
+    fontSize: 14,
+  },
+
+  fitChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  fitChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d9e6dd",
+    backgroundColor: "#fff",
+  },
+
+  activeFitChip: {
+    borderColor: "#198754",
+    backgroundColor: "#e9f8ef",
+  },
+
+  fitChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#4b5563",
+  },
+
+  activeFitChipText: {
+    color: "#0f5132",
+  },
+
+  aiSizeError: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "#fff1f2",
+    color: "#b42318",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  aiSizeSubmitBtn: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: "#198754",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  aiSizeSubmitBtnDisabled: {
+    opacity: 0.65,
+  },
+
+  aiSizeSubmitText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  aiSizeResultCard: {
+    margin: 12,
+    marginTop: 0,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#cdebd7",
+    backgroundColor: "#f7fff9",
+  },
+
+  aiSizeResultTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  aiSizeResultLabel: {
+    fontSize: 13,
+    color: "#4b5563",
+    fontWeight: "700",
+  },
+
+  aiSizeResultValue: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#198754",
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+    overflow: "hidden",
+  },
+
+  aiSizeAlt: {
+    marginTop: 10,
+    color: "#374151",
+    fontSize: 13,
+  },
+
+  aiSizeAltBold: {
+    fontWeight: "900",
+    color: "#111827",
+  },
+
+  aiSizeNote: {
+    marginTop: 8,
+    color: "#0f5132",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  aiSizeMessageBox: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e5efe8",
+  },
+
+  aiSizeMessageText: {
+    color: "#374151",
+    lineHeight: 20,
+    fontSize: 13,
+  },
+
+  aiInputWithUnit: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: "#d9e6dd",
+    borderRadius: 12,
+    backgroundColor: "#fafafa",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+
+  aiSizeInputWithUnit: {
+    flex: 1,
+    minHeight: 44,
+    color: "#111827",
+    fontSize: 14,
+    paddingVertical: 0,
+    paddingRight: 8,
+  },
+
+  aiInputUnit: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#198754",
   },
 });
 

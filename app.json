@@ -2,7 +2,7 @@
   "expo": {
     "name": "Pyzara",
     "slug": "test-eas-upload",
-    "version": "5.0.0",
+    "version": "6.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/EgtakeLogo.png",
     "scheme": "testeasupload",
@@ -39,7 +39,16 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-video"
+      "expo-video",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pyzara needs photo access so you can upload your skin image for AI skincare suggestions.",
+          "cameraPermission": "Pyzara needs camera access so you can take a skin photo for AI skincare suggestions.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

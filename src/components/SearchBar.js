@@ -120,6 +120,11 @@ const SearchBar = ({ onOpenSupport }) => {
       try {
         const res = await axios.get(
           `${SummaryApi.searchSuggestion.url}?q=${searchQuery}`,
+          {
+            headers: {
+              "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+            },
+          },
         );
         if (res.data.success) {
           setSuggestions(res.data.data);

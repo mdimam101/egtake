@@ -24,6 +24,7 @@ import SuccessModal from "../components/SuccessModal";
 import Context from "../context";
 import deleteCartItemWhenOrderplace from "../helper/deleteCartItemWhenOrderplace";
 import { GUEST_CART_KEY } from "../helper/guestCart";
+import { trackBasic } from "../helper/trackBasic";
 import updateProductStock from "../helper/updateProductStock";
 
 const PLACEHOLDER_COLOR = "#999";
@@ -134,7 +135,8 @@ const CheckoutPage = () => {
 
   // 🔽 Upazila-wise free threshold (only if district === Narayanganj)
   const getNarUpazilaThreshold = (upazila) => {
-    if (upazila === "Narayanganj Sodor" || upazila === "Bandar") return MIN_FREE_NAR;
+    if (upazila === "Narayanganj Sodor" || upazila === "Bandar")
+      return MIN_FREE_NAR;
     if (upazila === "Shonargaon") return MIN_FREE_DHK;
     if (upazila === "Others Upazila") return MIN_FREE_OTH;
     // fallback if not selected yet
@@ -151,7 +153,7 @@ const CheckoutPage = () => {
 
   const currentThreshold = getFreeThreshold(
     formData.district,
-    formData.upazila
+    formData.upazila,
   );
 
   const freeEligible = formData.district ? baseTotal >= currentThreshold : true;
@@ -256,7 +258,7 @@ const CheckoutPage = () => {
 
   const deliveryCharge = computeDeliveryCharge(
     formData.district,
-    deliveryOption
+    deliveryOption,
   );
 
   const Subtotal =
@@ -272,7 +274,7 @@ const CheckoutPage = () => {
       const { data } = await axios.post(
         SummaryApi.coupon_apply.url,
         { code, subtotal: baseTotal },
-        { withCredentials: true }
+        { withCredentials: true },
       );
       if (data?.success) {
         const d = data?.totals?.discount || 0;
@@ -307,7 +309,7 @@ const CheckoutPage = () => {
       await axios.put(
         SummaryApi.update_shipping.url,
         { name, phone, address, district, upazila },
-        { withCredentials: true }
+        { withCredentials: true },
       );
     } catch {
       /* ignore */
@@ -321,13 +323,13 @@ const CheckoutPage = () => {
         productId: item.productId._id,
         productName: item?.productName || item.productId.productName,
         quantity: item.quantity,
-        price: ( item?.selling || item?.productId?.selling ) * item.quantity,
+        price: (item?.selling || item?.productId?.selling) * item.quantity,
         size: item.size,
         color: item.color,
         image: item.image,
-        productCodeNumber: item.productId?.productCodeNumber
+        productCodeNumber: item.productId?.productCodeNumber,
       })),
-    [selectedItems]
+    [selectedItems],
   );
 
   const handleSubmitOrder = async () => {
@@ -394,12 +396,12 @@ const CheckoutPage = () => {
         //   )
         // );
         for (const item of selectedItems) {
-         await updateProductStock(
-         item.productId,
-         item.image,
-         item.size,
-         item.quantity
-         );
+          await updateProductStock(
+            item.productId,
+            item.image,
+            item.size,
+            item.quantity,
+          );
         }
 
         if (couponCode && discount > 0) {
@@ -407,7 +409,7 @@ const CheckoutPage = () => {
             await axios.post(
               SummaryApi.coupon_commit.url,
               { code: couponCode, orderId: response?.data?.orderId },
-              { withCredentials: true }
+              { withCredentials: true },
             );
           } catch (err) {
             // console.log("❌ Coupon commit failed", err);
@@ -415,6 +417,7 @@ const CheckoutPage = () => {
         }
 
         setModalVisible(true);
+        trackBasic("order_confirm", { count: selectedItems.length });
         // যেখানে order confirm success হয়:
         await clearGuestCart(); // ✅ guest cart মুছে যাবে
         await handleRemove(idArray);
@@ -560,7 +563,7 @@ const CheckoutPage = () => {
                 onPress={() =>
                   handleInputChange(
                     "_toggleUpazilaOpen",
-                    !formData._toggleUpazilaOpen
+                    !formData._toggleUpazilaOpen,
                   )
                 }
               >
@@ -646,8 +649,8 @@ const CheckoutPage = () => {
                   {formData.district === "Narayanganj"
                     ? "Delivery time 3–36 hours"
                     : formData.district === "Dhaka"
-                    ? "Delivery time within 48 hours"
-                    : "Delivery time within 1–3 days"}
+                      ? "Delivery time within 48 hours"
+                      : "Delivery time within 1–3 days"}
                 </Text>
 
                 {freeDisabled && (
@@ -856,7 +859,7 @@ const CheckoutPage = () => {
             <Text style={styles.amountText}>
               ৳
               {selectedItems.reduce((acc, item) => {
-                const original = item.price || item.productId?.price 
+                const original = item.price || item.productId?.price;
                 return acc + original * item.quantity;
               }, 0)}
             </Text>
@@ -880,8 +883,8 @@ const CheckoutPage = () => {
               {deliveryOption === "EXPRESS"
                 ? "Express"
                 : formData.district === "Narayanganj"
-                ? "Narayanganj Std/Free"
-                : "Standard"}
+                  ? "Narayanganj Std/Free"
+                  : "Standard"}
               )
             </Text>
             <View
@@ -900,7 +903,9 @@ const CheckoutPage = () => {
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.labelText}>Handling Charge(Internal cost±)</Text>
+            <Text style={styles.labelText}>
+              Handling Charge(Internal cost±)
+            </Text>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
@@ -910,7 +915,9 @@ const CheckoutPage = () => {
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.labelText}>Processing Fee(server, apps, etc±)</Text>
+            <Text style={styles.labelText}>
+              Processing Fee(server, apps, etc±)
+            </Text>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >

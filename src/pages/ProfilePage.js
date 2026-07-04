@@ -27,6 +27,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SummaryApi from "../common/SummaryApi";
+// import AiSkinCareHelper from "../components/AiSkinCareHelper";
 import ReviewModal from "../components/ReviewModal";
 import Context from "../context";
 import updateProductStock from "../helper/updateProductStock";
@@ -604,6 +605,9 @@ const ProfilePage = () => {
   const SUPPORT_PHONE = commonInfo[0]?.whatsAppNumber;
   const WHATSAPP_PHONE = commonInfo[0]?.supportCallNumber;
 
+  // AI skin care
+  // const [skinCareProducts, setSkinCareProducts] = useState([]);
+
   // Fetch Orders
   const fetchUserOrders = useCallback(async () => {
     try {
@@ -636,6 +640,25 @@ const ProfilePage = () => {
       setLoadingOrders(false);
     }
   }, []);
+
+  // AI skin care
+  // const fetchSkinCareProducts = useCallback(async () => {
+  //   try {
+  //     const res = await axios.get(SummaryApi.get_product.url, {
+  //       withCredentials: true,
+  //     });
+
+  //     if (res.data?.success) {
+  //       setSkinCareProducts(res.data?.data || []);
+  //     }
+  //   } catch (error) {
+  //     console.log("Skin care product load error:", error);
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   fetchSkinCareProducts();
+  // }, [fetchSkinCareProducts]);
 
   useEffect(() => {
     fetchUserOrders();
@@ -1091,7 +1114,9 @@ const ProfilePage = () => {
                     size={14}
                     color="#1976d2"
                   />
-                  <Text style={styles.memberBadgeText}>Member</Text>
+                  <Text style={styles.memberBadgeText}>
+                    ✓ {user?.role || "_"} Member
+                  </Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -1178,6 +1203,9 @@ const ProfilePage = () => {
                 }
               />
             </View>
+
+            {/* AI skin care */}
+            {/* <AiSkinCareHelper websiteProductList={skinCareProducts} /> */}
 
             {/* Tabs */}
             <View style={styles.tabsRow}>

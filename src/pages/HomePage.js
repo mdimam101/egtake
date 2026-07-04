@@ -176,7 +176,11 @@ const HomePage = () => {
       //   `${SummaryApi.get_product.url}?_t=${Date.now()}`,
       //   { headers: { "Cache-Control": "no-cache" } }
       // );
-      const res = await axios.get(SummaryApi.get_product.url);
+      const res = await axios.get(SummaryApi.get_product.url, {
+        headers: {
+          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+        },
+      });
 
       if (res.data?.success) {
         const newData = res.data.data || [];
