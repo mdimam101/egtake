@@ -26,12 +26,13 @@ const SubCategoryWiseProduct = ({ route }) => {
   const [svKey, setSvKey] = useState(0);
 
   const fetchWishCategoryProduct = async () => {
+    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
     try {
       const response = await axios({
         url: SummaryApi.category_wish_product.url,
         method: SummaryApi.category_wish_product.method,
         headers: {
-          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+          "x-client-key": clientKey,
           "content-type": "application/json",
         },
         data: {

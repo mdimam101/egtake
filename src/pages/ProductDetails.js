@@ -92,6 +92,7 @@ const ProductDetails = ({ route }) => {
     description: "",
     price: 0,
     selling: 0,
+    sold: 0,
     sizeDetails: [],
     qualityType: "",
     productQA: [],
@@ -260,6 +261,7 @@ const ProductDetails = ({ route }) => {
     };
 
     const fetchData = async () => {
+      const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
       setLoading(true);
 
       // 1️⃣ Cached
@@ -275,7 +277,7 @@ const ProductDetails = ({ route }) => {
           method: SummaryApi.product_details.method,
           url: SummaryApi.product_details.url,
           headers: {
-            "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+            "x-client-key": clientKey,
             "Content-Type": "application/json",
           },
           data: { productId: id },
@@ -377,7 +379,7 @@ const ProductDetails = ({ route }) => {
       productName: updateProductName,
       size: isSizeAvailable ? selectedSize : "",
       color: isColorAvailable ? selectedVariant?.color : "",
-      image: (selectedImg || "").replace("https://", "http://"),
+      image: selectedImg || "",
       price: UpdatePrice,
       selling: updateSelling,
       productCodeNumber: data.productCodeNumber,
@@ -762,6 +764,12 @@ const ProductDetails = ({ route }) => {
             <Text style={styles.discount}>Save {discount}%</Text>
           )}
           <Text style={styles.originalPrice}>৳{UpdatePrice}</Text>
+
+          {data?.sold > 0 && (
+            <Text style={styles.soldBadge}>
+              Sold: {Number(data?.sold || 0)}
+            </Text>
+          )}
         </View>
         <Text style={styles.productName}>{updateProductName}</Text>
 
@@ -1137,10 +1145,10 @@ const ProductDetails = ({ route }) => {
               onPress={() =>
                 openCommitmentModal(
                   "Free Delivery",
-                  `✓নারায়ণগঞ্জে ${commonInfo[0]?.nrGanjMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
-                  \n✓ঢাকা ${commonInfo[0]?.DhakaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
-                  \n✓নারায়ণগঞ্জ ও ঢাকার বাইরে ${commonInfo[0]?.OthersAreaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  `✓Premium Members নারায়ণগঞ্জে ${commonInfo[0]?.nrGanjMiniOrdr} টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
                   \n✓--Narayanganj Express delivery within 3 hours--`,
+                  //  \n✓ঢাকা ${commonInfo[0]?.DhakaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
+                  // \n✓নারায়ণগঞ্জ ও ঢাকার বাইরে ${commonInfo[0]?.OthersAreaMiniOrdr}+ টাকা বা তার বেশি অর্ডার করলে ফ্রি ডেলিভারি।
                 )
               }
             >
@@ -1164,7 +1172,7 @@ const ProductDetails = ({ route }) => {
               onPress={() =>
                 openCommitmentModal(
                   "Delivery Commitment",
-                  `✓ 100円 coupon code if delayed\n✓ Refund if items damaged\n✓ Refund if package lost\n✓ Refund if no delivery`,
+                  `✓ 50tk coupon code if delayed\n✓ Refund if items damaged\n✓ Refund if package lost\n✓ Refund if no delivery`,
                 )
               }
             >
@@ -1175,8 +1183,8 @@ const ProductDetails = ({ route }) => {
                 </View>
                 <View style={styles.policyRow}>
                   <Text style={styles.policyCheck}>
-                    <Text style={{ color: "green" }}>✓</Text> ৳100 coupon code
-                    if delayed
+                    <Text style={{ color: "green" }}>✓</Text> ৳50 coupon code if
+                    delayed
                   </Text>
                   <Text style={styles.policyCheck}>
                     <Text style={{ color: "green" }}>✓</Text> Refund if items
@@ -1605,6 +1613,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   originalPrice: { textDecorationLine: "line-through", color: "#888" },
+  soldBadge: {
+    color: "#0f766e",
+    background: "rgba(15, 118, 110, 0.08)",
+    border: "1 solid rgba(15, 118, 110, 0.22)",
+    alignItems: "center",
+    marginLeft: 10,
+    borderRadius: 99,
+    fontWeight: 700,
+  },
   productName: { fontSize: 18, fontWeight: "600", marginTop: 12 },
   colorInfo: { fontSize: 14, marginTop: 4, color: "#555" },
   thumbnailRow: { flexDirection: "row", marginTop: 12 },

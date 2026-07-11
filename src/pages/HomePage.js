@@ -106,6 +106,7 @@ const HomePage = () => {
 
   // ============== DATA FETCH (cache → API) ==============
   const fetchAllProducts = async () => {
+    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
     setLoading(true);
     try {
       // 1) Cached → instant UI
@@ -178,7 +179,7 @@ const HomePage = () => {
       // );
       const res = await axios.get(SummaryApi.get_product.url, {
         headers: {
-          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+          "x-client-key": clientKey,
         },
       });
 

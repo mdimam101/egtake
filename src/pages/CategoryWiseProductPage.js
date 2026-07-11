@@ -14,13 +14,14 @@ const CategoryWiseProductPage = ({ route }) => {
   const [sortedProducts, setSortedProducts] = useState([]);
 
   const fetchWishCategoryProduct = async () => {
+    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
     try {
       const res = await axios({
         method: SummaryApi.category_wish_product.method,
         url: SummaryApi.category_wish_product.url,
         data: { category: categoryName },
         headers: {
-          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+          "x-client-key": clientKey,
           "content-type": "application/json",
         },
       });

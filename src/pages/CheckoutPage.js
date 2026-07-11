@@ -1,4 +1,4 @@
-// ✅ CheckoutPage — Delivery Option (Narayanganj + Upazila thresholds) + Payment (COD)
+// // ✅ CheckoutPage — Premium free delivery + Payment (COD)
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -31,14 +31,6 @@ const PLACEHOLDER_COLOR = "#999";
 // payment gat way server coast etc
 const PROCESSING_FEE = 5;
 
-// 🔽 New: Upazila options (only for Narayanganj)
-const NARAYANGANJ_UPAZILAS = [
-  "Narayanganj Sodor",
-  "Bandar",
-  "Shonargaon",
-  "Others Upazila",
-];
-
 const CheckoutPage = () => {
   const navigation = useNavigation();
   const { fetchUserAddToCart } = useContext(Context);
@@ -59,13 +51,7 @@ const CheckoutPage = () => {
 
   const MIN_FREE_NAR = commonInfo[0]?.nrGanjMiniOrdr
     ? Number(commonInfo[0]?.nrGanjMiniOrdr)
-    : 999; // fallback — used if upazila absent
-  const MIN_FREE_DHK = commonInfo[0]?.DhakaMiniOrdr
-    ? Number(commonInfo[0]?.DhakaMiniOrdr)
-    : 1190;
-  const MIN_FREE_OTH = commonInfo[0]?.OthersAreaMiniOrdr
-    ? Number(commonInfo[0]?.OthersAreaMiniOrdr)
-    : 1500;
+    : 999;
 
   const handlingCharge = commonInfo[0]?.handlingCharge
     ? Number(commonInfo[0]?.handlingCharge)
@@ -105,7 +91,7 @@ const CheckoutPage = () => {
             phone: ship.phone || "",
             address: ship.address || "",
             district: ship.district || "",
-            upazila: ship.upazila || "",
+            upazila: "", //infuture will be add
           }));
         }
       } catch {
@@ -120,8 +106,8 @@ const CheckoutPage = () => {
 
   // district base charges (unchanged for non-Narayanganj)
   const districtCharge = (district) => {
-    if (district === "Narayanganj") return 0;
-    if (district === "Dhaka") return 50;
+    if (district === "Narayanganj") return 70;
+    if (district === "Dhaka") return 80;
     if (district === "Others") return 130;
     return 0;
   };
@@ -133,125 +119,43 @@ const CheckoutPage = () => {
     }, 0);
   }, [selectedItems]);
 
-  // 🔽 Upazila-wise free threshold (only if district === Narayanganj)
-  const getNarUpazilaThreshold = (upazila) => {
-    if (upazila === "Narayanganj Sodor" || upazila === "Bandar")
-      return MIN_FREE_NAR;
-    if (upazila === "Shonargaon") return MIN_FREE_DHK;
-    if (upazila === "Others Upazila") return MIN_FREE_OTH;
-    // fallback if not selected yet
-    return MIN_FREE_NAR;
-  };
+  const isPremiumUser = user?.role === "PREMIUM";
 
   // ✅ Free threshold helpers (all districts, Narayanganj depends on upazila)
-  const getFreeThreshold = (district, upazila) => {
-    if (district === "Narayanganj") return getNarUpazilaThreshold(upazila);
-    if (district === "Dhaka") return MIN_FREE_DHK;
-    if (district === "Others") return MIN_FREE_OTH;
+  const getFreeThreshold = (district) => {
+    if (district === "Narayanganj") return MIN_FREE_NAR;
     return Infinity;
   };
 
-  const currentThreshold = getFreeThreshold(
-    formData.district,
-    formData.upazila,
-  );
+  const currentThreshold = getFreeThreshold(formData.district);
 
-  const freeEligible = formData.district ? baseTotal >= currentThreshold : true;
+  const premiumMinimumEligible =
+    formData.district === "Narayanganj" &&
+    isPremiumUser &&
+    baseTotal >= currentThreshold;
 
-  const freeDisabled = !!formData.district && !freeEligible;
+  const freeDisabled = !premiumMinimumEligible;
 
   const remainingForFree = formData.district
     ? Math.max(0, currentThreshold - baseTotal)
     : 0;
 
-  // ✅ Narayanganj-only guard: under threshold হলে FREE থাকলে NAR120-এ ফোর্স
   useEffect(() => {
-    if (
-      formData.district === "Narayanganj" &&
-      baseTotal < currentThreshold &&
-      deliveryOption === "FREE"
-    ) {
-      setDeliveryOption("NAR120");
-    }
-  }, [
-    formData.district,
-    formData.upazila,
-    baseTotal,
-    currentThreshold,
-    deliveryOption,
-  ]);
+    if (!formData.district) return;
 
-  // ✅ Disallow EXPRESS outside Sodor/Bandar
-  useEffect(() => {
-    if (
-      formData.district === "Narayanganj" &&
-      deliveryOption === "EXPRESS" &&
-      !["Narayanganj Sodor", "Bandar"].includes(formData.upazila)
-    ) {
-      setDeliveryOption("NAR120");
-      setUserTouchedDelivery(false);
-    }
-  }, [formData.district, formData.upazila, deliveryOption]);
-
-  // ✅ District switch normalization (keep your previous logic + upazila reset)
-  useEffect(() => {
-    const d = formData.district;
-    if (!d) return;
-
-    if (d === "Narayanganj") {
-      // when user changes to Narayanganj, ensure upazila is empty (forces user to choose)
-      if (!formData.upazila) {
-        setDeliveryOption("NAR120"); // a sensible default
-      }
-      if (deliveryOption === "STD") {
-        setDeliveryOption(baseTotal >= currentThreshold ? "FREE" : "NAR120");
-        setUserTouchedDelivery(false);
-      }
+    if (formData.district === "Narayanganj") {
+      setDeliveryOption(premiumMinimumEligible ? "FREE" : "NAR70");
       return;
     }
 
-    // leaving Narayanganj → clear upazila & normalize delivery option
-    if (formData.upazila) setFormData((p) => ({ ...p, upazila: "" }));
+    setDeliveryOption("STD");
+  }, [formData.district, premiumMinimumEligible]);
 
-    if (deliveryOption === "EXPRESS" || deliveryOption === "NAR120") {
-      setDeliveryOption(freeEligible ? "FREE" : "STD");
-      setUserTouchedDelivery(false);
-    }
-  }, [
-    formData.district,
-    baseTotal,
-    freeEligible,
-    currentThreshold,
-    deliveryOption,
-  ]);
-
-  // ✅ Dhaka/Others: subtotal crossing threshold → auto toggle STD ↔ FREE
-  useEffect(() => {
-    if (
-      !userTouchedDelivery &&
-      (formData.district === "Dhaka" || formData.district === "Others")
-    ) {
-      if (!freeEligible && deliveryOption === "FREE") {
-        setDeliveryOption("STD");
-      }
-      if (freeEligible && deliveryOption === "STD") {
-        setDeliveryOption("FREE");
-      }
-    }
-  }, [formData.district, freeEligible, deliveryOption, userTouchedDelivery]);
-
-  // ✅ delivery charge depends on district + selection
   const computeDeliveryCharge = (district, option) => {
     if (district === "Narayanganj") {
-      if (option === "EXPRESS") return 150; // only visible for Sodor/Bandar
-      if (option === "NAR120") return 120; // standard inside Narayanganj
-      return 0; // FREE
-    }
-    if (district === "Dhaka") {
-      return baseTotal >= MIN_FREE_DHK ? 0 : districtCharge(district);
-    }
-    if (district === "Others") {
-      return baseTotal >= MIN_FREE_OTH ? 0 : districtCharge(district);
+      if (option === "FREE" && premiumMinimumEligible) return 0;
+      if (option === "EXPRESS") return 160;
+      return districtCharge(district);
     }
     return districtCharge(district);
   };
@@ -301,7 +205,7 @@ const CheckoutPage = () => {
     }
   };
 
-  // Save/update default shipping silently (now also upazila)
+  // Save/update default shipping silently
   const upsertUserShipping = async () => {
     try {
       const { name, phone, address, district, upazila } = formData;
@@ -344,8 +248,6 @@ const CheckoutPage = () => {
     if (!name) newErrors.name = "Full name is required";
     if (!phone) newErrors.phone = "Phone number is required";
     if (!district) newErrors.district = "Please select your district";
-    if (district === "Narayanganj" && !upazila)
-      newErrors.upazila = "Please select your upazila";
     if (!address) newErrors.address = "Full address is required";
 
     if (Object.keys(newErrors).length > 0) {
@@ -359,8 +261,6 @@ const CheckoutPage = () => {
     submitLockRef.current = true;
 
     try {
-      await upsertUserShipping();
-
       const deliveryTimeline =
         deliveryOption === "EXPRESS" ? "Express" : "Normal";
 
@@ -381,6 +281,9 @@ const CheckoutPage = () => {
       });
 
       if (response?.data?.success) {
+        // shipping update
+        await upsertUserShipping();
+
         const idArray = selectedItems
           .filter((item) => item._id && !item?.isStoreData)
           .map((item) => item._id);
@@ -451,24 +354,10 @@ const CheckoutPage = () => {
   const deliveryLabelValue =
     deliveryCharge === 0 ? "FREE" : `৳${deliveryCharge}`;
 
-  // ✅ FREE কার্ডের জন্য আলাদা লেবেল: সবসময় FREE দেখাবে
   const freeCardPriceLabel = "FREE";
 
   // helper labels for FREE card header line
-  const freeTitleByArea = () => {
-    if (formData.district === "Narayanganj") {
-      const th = currentThreshold;
-      return `Free Delivery ৳${th}+`;
-    }
-    if (formData.district === "Dhaka") return `Free Delivery ৳${MIN_FREE_DHK}+`;
-    if (formData.district === "Others")
-      return `Free Delivery ৳${MIN_FREE_OTH}+`;
-    return "Delivery commitment";
-  };
-
-  const showExpress =
-    formData.district === "Narayanganj" &&
-    ["Narayanganj Sodor", "Bandar"].includes(formData.upazila);
+  const freeTitleByArea = () => `Premium Free Delivery ৳${MIN_FREE_NAR}+`;
 
   return (
     <View style={styles.container}>
@@ -537,68 +426,15 @@ const CheckoutPage = () => {
             onSelect={(val) => {
               handleInputChange("district", val);
               // reset upazila when district changes
-              if (val !== "Narayanganj" && formData.upazila) {
+              if (formData.upazila) {
                 handleInputChange("upazila", "");
               }
-              setUserTouchedDelivery(false);
             }}
             style={[styles.input, errors.district && styles.inputError]}
             disabled={isSubmitting}
           />
           {errors.district && (
             <Text style={styles.errorText}>{errors.district}</Text>
-          )}
-
-          {/* 🔽 Upazila dropdown (only when Narayanganj) */}
-          {formData.district === "Narayanganj" && (
-            <>
-              <TouchableOpacity
-                style={[
-                  styles.input,
-                  { flexDirection: "row", justifyContent: "space-between" },
-                  errors.upazila && styles.inputError,
-                ]}
-                activeOpacity={0.8}
-                disabled={isSubmitting}
-                onPress={() =>
-                  handleInputChange(
-                    "_toggleUpazilaOpen",
-                    !formData._toggleUpazilaOpen,
-                  )
-                }
-              >
-                <Text
-                  style={{
-                    color: formData.upazila ? "#111" : PLACEHOLDER_COLOR,
-                  }}
-                >
-                  {formData.upazila || "Select Upazila (Narayanganj)"}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#666" />
-              </TouchableOpacity>
-              {errors.upazila && (
-                <Text style={styles.errorText}>{errors.upazila}</Text>
-              )}
-
-              {/* simple inline dropdown list */}
-              {formData._toggleUpazilaOpen && (
-                <View style={styles.dropdownList}>
-                  {NARAYANGANJ_UPAZILAS.map((u) => (
-                    <TouchableOpacity
-                      key={u}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        handleInputChange("upazila", u);
-                        handleInputChange("_toggleUpazilaOpen", false);
-                        setUserTouchedDelivery(false);
-                      }}
-                    >
-                      <Text style={{ color: "#111" }}>{u}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </>
           )}
 
           <TextInput
@@ -617,71 +453,67 @@ const CheckoutPage = () => {
         {/* Delivery Options (after district selected) */}
         {formData.district && (
           <View style={styles.optionSection}>
-            {formData.district === "Narayanganj" && (
-              <Text style={styles.sectionTitle}>📦 Delivery Option</Text>
-            )}
+            <Text style={styles.sectionTitle}>📦 Delivery Option</Text>
 
-            {/* FREE (always shown; may be locked below threshold) */}
-            <TouchableOpacity
-              style={[
-                styles.optionCard,
-                deliveryOption === "FREE" && styles.optionCardActive,
-                (isSubmitting || freeDisabled) && styles.disabledCard, // locked look
-              ]}
-              onPress={() => {
-                if (isSubmitting || freeDisabled) return;
-                setDeliveryOption("FREE");
-                setUserTouchedDelivery(true);
-              }}
-              disabled={isSubmitting || freeDisabled}
-            >
-              <View style={styles.radioDotWrap}>
-                <View
-                  style={[
-                    styles.radioDot,
-                    deliveryOption === "FREE" && styles.radioDotActive,
-                  ]}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.optionTitle}>{freeTitleByArea()}</Text>
-                <Text style={styles.optionSub}>
-                  {formData.district === "Narayanganj"
-                    ? "Delivery time 3–36 hours"
-                    : formData.district === "Dhaka"
-                      ? "Delivery time within 48 hours"
-                      : "Delivery time within 1–3 days"}
-                </Text>
-
-                {freeDisabled && (
-                  <Text style={styles.lockHint}>
-                    Add ৳{remainingForFree} more to unlock FREE
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.optionPrice}>{freeCardPriceLabel}</Text>
-
-              {/* small lock badge when locked */}
-              {freeDisabled && (
-                <View style={styles.lockBadge}>
-                  <Ionicons name="lock-closed" size={12} color="#555" />
-                  <Text style={styles.lockBadgeText}>Locked</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* ✅ Narayanganj Standard (৳120) — for all Upazilas in Narayanganj */}
+            {/* FREE: Premium users only for Narayanganj after minimum */}
             {formData.district === "Narayanganj" && (
               <TouchableOpacity
                 style={[
                   styles.optionCard,
-                  deliveryOption === "NAR120" && styles.optionCardActive,
+                  deliveryOption === "FREE" && styles.optionCardActive,
+                  (isSubmitting || freeDisabled) && styles.disabledCard,
+                ]}
+                onPress={() => {
+                  if (isSubmitting || freeDisabled) return;
+                  setDeliveryOption("FREE");
+                }}
+                disabled={isSubmitting || freeDisabled}
+              >
+                <View style={styles.radioDotWrap}>
+                  <View
+                    style={[
+                      styles.radioDot,
+                      deliveryOption === "FREE" && styles.radioDotActive,
+                    ]}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.optionTitle}>{freeTitleByArea()}</Text>
+                  <Text style={styles.optionSub}>
+                    Premium users get free delivery after minimum order
+                  </Text>
+
+                  {freeDisabled && (
+                    <Text style={styles.lockHint}>
+                      {isPremiumUser
+                        ? `Add ৳${remainingForFree} more to unlock FREE`
+                        : "Only PREMIUM users can unlock FREE delivery"}
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.optionPrice}>{freeCardPriceLabel}</Text>
+
+                {/* small lock badge when locked */}
+                {freeDisabled && (
+                  <View style={styles.lockBadge}>
+                    <Ionicons name="lock-closed" size={12} color="#555" />
+                    <Text style={styles.lockBadgeText}>Locked</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* ✅ Narayanganj Standard (৳70) — for all Upazilas in Narayanganj */}
+            {formData.district === "Narayanganj" && (
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  deliveryOption === "NAR70" && styles.optionCardActive,
                   isSubmitting && styles.disabledCard,
                 ]}
                 onPress={() => {
                   if (isSubmitting) return;
-                  setDeliveryOption("NAR120");
-                  setUserTouchedDelivery(true);
+                  setDeliveryOption("NAR70");
                 }}
                 disabled={isSubmitting}
               >
@@ -697,12 +529,11 @@ const CheckoutPage = () => {
                   <Text style={styles.optionTitle}>Standard Delivery</Text>
                   <Text style={styles.optionSub}>Delivery time 3–24 hours</Text>
                 </View>
-                <Text style={styles.optionPrice}>৳120</Text>
+                <Text style={styles.optionPrice}>৳70</Text>
               </TouchableOpacity>
             )}
 
-            {/* EXPRESS — only for Narayanganj Sodor / Bandar */}
-            {showExpress && (
+            {formData.district === "Narayanganj" && (
               <TouchableOpacity
                 style={[
                   styles.optionCard,
@@ -712,7 +543,6 @@ const CheckoutPage = () => {
                 onPress={() => {
                   if (isSubmitting) return;
                   setDeliveryOption("EXPRESS");
-                  setUserTouchedDelivery(true);
                 }}
                 disabled={isSubmitting}
               >
@@ -728,12 +558,12 @@ const CheckoutPage = () => {
                   <Text style={styles.optionTitle}>Express Delivery</Text>
                   <Text style={styles.optionSub}>Delivery within 3 hours</Text>
                 </View>
-                <Text style={styles.optionPrice}>৳150</Text>
+                <Text style={styles.optionPrice}>৳160</Text>
               </TouchableOpacity>
             )}
 
-            {/* ✅ Dhaka Standard (৳50) — only when < threshold */}
-            {formData.district === "Dhaka" && !freeEligible && (
+            {/* ✅ Dhaka Standard (৳50) */}
+            {formData.district === "Dhaka" && (
               <TouchableOpacity
                 style={[
                   styles.optionCard,
@@ -743,7 +573,6 @@ const CheckoutPage = () => {
                 onPress={() => {
                   if (isSubmitting) return;
                   setDeliveryOption("STD");
-                  setUserTouchedDelivery(true);
                 }}
                 disabled={isSubmitting}
               >
@@ -767,8 +596,8 @@ const CheckoutPage = () => {
               </TouchableOpacity>
             )}
 
-            {/* ✅ Others Standard (৳130) — only when < threshold */}
-            {formData.district === "Others" && !freeEligible && (
+            {/* ✅ Others Standard (৳130) */}
+            {formData.district === "Others" && (
               <TouchableOpacity
                 style={[
                   styles.optionCard,
@@ -778,7 +607,6 @@ const CheckoutPage = () => {
                 onPress={() => {
                   if (isSubmitting) return;
                   setDeliveryOption("STD");
-                  setUserTouchedDelivery(true);
                 }}
                 disabled={isSubmitting}
               >
@@ -880,17 +708,17 @@ const CheckoutPage = () => {
           <View className="summaryRow" style={styles.summaryRow}>
             <Text style={styles.labelText}>
               Delivery Charge (
-              {deliveryOption === "EXPRESS"
-                ? "Express"
-                : formData.district === "Narayanganj"
-                  ? "Narayanganj Std/Free"
+              {deliveryOption === "FREE"
+                ? "Premium Free"
+                : deliveryOption === "EXPRESS"
+                  ? "Express"
                   : "Standard"}
               )
             </Text>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
-              <Text style={styles.oldAmount}>৳150</Text>
+              <Text style={styles.oldAmount}>৳160</Text>
               <Text
                 style={[
                   styles.amountText,

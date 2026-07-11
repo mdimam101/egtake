@@ -43,8 +43,10 @@ import * as Clarity from "@microsoft/react-native-clarity";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SystemUI from "expo-system-ui";
 import { navigationRef } from "./src/common/navigationRef"; // না থাকলে createNavigationContainerRef দিয়ে বানাও
+import AppUpdateModal from "./src/components/AppUpdateModal";
 import { GUEST_CART_KEY } from "./src/helper/guestCart";
 import { setCommonGetInfoList } from "./src/store/commonInfoSlice";
+import { checkAppUpdate } from "./src/utils/checkAppUpdate";
 import { ensureDeviceId } from "./src/utils/deviceId";
 
 const Stack = createNativeStackNavigator();
@@ -55,6 +57,8 @@ const AppWrapper = () => {
   const [cartListData, setCartListData] = useState([]);
   const user = useSelector((state) => state?.userState?.user);
   const [currentRouteName, setCurrentRouteName] = useState("Home");
+  const [appUpdateInfo, setAppUpdateInfo] = useState(null);
+  const [showAppUpdateModal, setShowAppUpdateModal] = useState(false);
 
   const fetchUserDetails = async () => {
     try {
@@ -127,6 +131,21 @@ const AppWrapper = () => {
   useEffect(() => {
     // Create and persist deviceId on first app open
     ensureDeviceId().catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    // TODO upload korar somuy
+    if (Platform.OS !== "android") return undefined;
+
+    const timer = setTimeout(async () => {
+      const updateInfo = await checkAppUpdate();
+      if (updateInfo) {
+        setAppUpdateInfo(updateInfo);
+        setShowAppUpdateModal(true);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -203,6 +222,11 @@ const AppWrapper = () => {
             </Stack.Navigator>
             <FooterNavBar />
           </View>
+          <AppUpdateModal
+            visible={showAppUpdateModal}
+            updateInfo={appUpdateInfo}
+            onClose={() => setShowAppUpdateModal(false)}
+          />
           <Toast />
         </NavigationContainer>
         {/* </GestureHandlerRootView> */}

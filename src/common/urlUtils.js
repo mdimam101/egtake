@@ -5,15 +5,12 @@ export function ensureHttps(url) {
 
 export function canon(url) {
   if (typeof url !== "string" || !url) return "";
-  return url.trim().replace(/^https?:\/\//i, "").replace(/%20/gi, " ").replace(/\s+/g, " ");
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/%20/gi, " ")
+    .replace(/\s+/g, " ");
 }
-
-// ✅ API payload-এ পাঠানোর সময় http নিশ্চিত করতে
-export function toHttp(url) {
-  if (typeof url !== "string" || !url) return url;
-  return url.startsWith("https://") ? url.replace("https://", "http://") : url;
-}
-
 
 // সার্ভারে পাঠানোর জন্য: যে ইমেজটা variant list-এ আছে,
 // সেটার original string (http/https যেটা ছিল) রিটার্ন করো।

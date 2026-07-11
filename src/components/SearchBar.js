@@ -117,12 +117,13 @@ const SearchBar = ({ onOpenSupport }) => {
     }
 
     const fetchSuggestions = async () => {
+      const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
       try {
         const res = await axios.get(
           `${SummaryApi.searchSuggestion.url}?q=${searchQuery}`,
           {
             headers: {
-              "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+              "x-client-key": clientKey,
             },
           },
         );

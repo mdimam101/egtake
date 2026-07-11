@@ -31,6 +31,7 @@ const SearchResultScreen = () => {
 
   useEffect(() => {
     const fetchSearchResults = async () => {
+      const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
       setLoading(true);
       if (query) {
         trackBasic("search", { term: query });
@@ -40,7 +41,7 @@ const SearchResultScreen = () => {
           `${SummaryApi.searchProduct.url}?q=${query}`,
           {
             headers: {
-              "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+              "x-client-key": clientKey,
             },
           },
         );

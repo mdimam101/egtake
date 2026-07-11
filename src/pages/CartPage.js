@@ -12,6 +12,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
+import { canon } from "../common/urlUtils";
 import CartItem from "../components/CartItem";
 import SkeletonCard from "../components/SkeletonCard";
 import UserProductCart from "../components/UserProductCart";
@@ -21,10 +22,29 @@ import { GUEST_CART_KEY } from "../helper/guestCart";
 const getIdentity = (item) => {
   const pid =
     typeof item.productId === "object" ? item.productId?._id : item.productId;
-  const image = (item.image || "").replace("https://", "http://");
+  const image = item.image || "";
   const size = (item.size || "").trim();
   const color = (item.color || "").trim();
   return `${pid}__${image}__${size}__${color}`;
+};
+
+const getMongoIdTime = (id) => {
+  if (typeof id !== "string" || !/^[a-f0-9]{24}$/i.test(id)) return 0;
+  return parseInt(id.slice(0, 8), 16) * 1000;
+};
+
+const getCartItemTime = (item, fallbackIndex = 0) => {
+  const directTime = Number(item?.addedAt);
+  if (Number.isFinite(directTime) && directTime > 0) return directTime;
+
+  const dateTime = Date.parse(item?.updatedAt || item?.createdAt || "");
+  if (Number.isFinite(dateTime)) return dateTime;
+
+  return getMongoIdTime(item?._id) || fallbackIndex;
+};
+
+const sortCartItemsNewestFirst = (items = []) => {
+  return [...items].sort((a, b) => getCartItemTime(b) - getCartItemTime(a));
 };
 
 // cache-first merge: cache আগে দেখাবে, তারপর server থেকে শুধু নতুন/updated গুলো যোগ করবে
@@ -41,7 +61,7 @@ const mergeCartArrays = (cacheArr = [], serverArr = []) => {
     map.set(getIdentity(it), it);
   }
 
-  return Array.from(map.values());
+  return sortCartItemsNewestFirst(Array.from(map.values()));
 };
 
 const CartPage = () => {
@@ -64,7 +84,7 @@ const CartPage = () => {
       const raw = await AsyncStorage.getItem(GUEST_CART_KEY);
       const cacheArr = raw ? JSON.parse(raw) : [];
       if (cacheArr.length > 0) {
-        setCartItems(cacheArr); // 👈 cache দেখালাম
+        setCartItems(sortCartItemsNewestFirst(cacheArr)); // 👈 cache দেখালাম
       }
       if (cacheArr.length === 0) {
         setCartItems([]);
@@ -92,10 +112,11 @@ const CartPage = () => {
 
   // check latest product for quantity check
   const fetchLatestProducts = async () => {
+    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
     try {
       const response = await axios.get(SummaryApi.get_product.url, {
         headers: {
-          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+          "x-client-key": clientKey,
         },
       });
       if (response.data.success) {
@@ -117,8 +138,9 @@ const CartPage = () => {
         const latest = latestProducts.find((p) => p._id === item.productId._id);
         if (!latest) return;
 
-        const variant = latest.variants.find(
-          (v) => v.images?.[0] === item.image,
+        const cartImageKey = canon(item.image);
+        const variant = latest.variants.find((v) =>
+          (v.images || []).some((img) => canon(img) === cartImageKey),
         );
         if (!variant) return;
 
@@ -154,7 +176,10 @@ const CartPage = () => {
     const latest = latestProducts.find((p) => p._id === item.productId._id);
     if (!latest) return { inStock: false };
 
-    const variant = latest.variants.find((v) => v.images?.[0] === item.image);
+    const cartImageKey = canon(item.image);
+    const variant = latest.variants.find((v) =>
+      (v.images || []).some((img) => canon(img) === cartImageKey),
+    );
 
     if (!variant) return { inStock: false };
 
@@ -208,6 +233,28 @@ const CartPage = () => {
       const sell = item?.productId?.selling || 0;
       return acc + (original - sell) * item.quantity;
     }, 0);
+
+  const updateCartItemQuantity = (itemId, nextQuantity) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item._id === itemId ? { ...item, quantity: nextQuantity } : item,
+      ),
+    );
+  };
+
+  const removeCartItemLocally = (itemId) => {
+    setCartItems((prevItems) =>
+      prevItems.filter((item) => item._id !== itemId),
+    );
+    setUnselectedItems((prevItems) => {
+      const updatedItems = prevItems.filter((id) => id !== itemId);
+      AsyncStorage.setItem(
+        "unselected_cart_ids",
+        JSON.stringify(updatedItems),
+      ).catch(() => {});
+      return updatedItems;
+    });
+  };
 
   const handleCheckout = () => {
     // console.log("◆◆handleCheckout◆_______：");
@@ -315,6 +362,8 @@ const CartPage = () => {
               key={`${item?._id}_${item?.addedAt}`} //✅ unique key
               product={item}
               refreshCart={fetchCartItems}
+              onQuantityChange={updateCartItemQuantity}
+              onItemRemove={removeCartItemLocally}
               latestProducts={latestProducts}
               isSelected={!unselectedItems.includes(item._id)}
               toggleSelect={() => toggleSelect(item._id)}

@@ -2,8 +2,8 @@
 // All your earlier rules preserved:
 // - Shipping (Confirmed → only Track; no item buttons)
 // - Delivered (per item: Return + Add Review; order-level Return hidden; Return Pending badge)
-// - Return tab (only Return Confirmed items)
-// - Review tab (only Review Confirmed items; no Track)
+// - Return tab (Return Confirmed / Return Complete items)
+// - Review tab (Reviewed items; no Track)
 // - Item action buttons moved UNDER item details
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -49,11 +49,15 @@ const ORDER_STATUS = {
 };
 
 const ITEM_STATUS = {
+  NORMAL: "Normal",
   PENDING: "Pending",
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
   RETURN_PENDING: "Return Pending",
   RETURN_CONFIRMED: "Return Confirmed",
+  RETURN_COMPLETE: "Return Complete",
+  REVIEWED: "Reviewed",
+  CANCELED: "Canceled",
 };
 
 const REVIEW_STATUS = {
@@ -64,17 +68,29 @@ const REVIEW_STATUS = {
 
 // ---------- Normalizers ----------
 const normalizeItemStatus = (s = "") => {
-  const t = String(s).toLowerCase().replace(/\s+/g, "");
-  if (t === "returnpending" || t === "return")
+  const t = String(s || "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  if (t === "normal") return ITEM_STATUS.NORMAL;
+  if (t === "returnpending" || t === "return") {
     return ITEM_STATUS.RETURN_PENDING;
-  if (t === "returnconfirmed") return ITEM_STATUS.RETURN_CONFIRMED;
+  }
+  if (t === "rconfirmed" || t === "returnconfirmed") {
+    return ITEM_STATUS.RETURN_CONFIRMED;
+  }
+  if (t === "returncomplete") return ITEM_STATUS.RETURN_COMPLETE;
+  if (t === "reviewed") return ITEM_STATUS.REVIEWED;
+  if (t === "canceled" || t === "cancelled") return ITEM_STATUS.CANCELED;
   if (t === "shipped") return ITEM_STATUS.SHIPPED;
   if (t === "delivered") return ITEM_STATUS.DELIVERED;
   if (t === "pending") return ITEM_STATUS.PENDING;
-  return s || ITEM_STATUS.PENDING;
+  return s || ITEM_STATUS.NORMAL;
 };
 
 const normalizeReviewStatus = (it = {}) => {
+  if (normalizeItemStatus(it.itemStatus) === ITEM_STATUS.REVIEWED) {
+    return REVIEW_STATUS.CONFIRMED;
+  }
   const raw =
     it.reviewStatus ??
     it.reviewTag ??
@@ -489,6 +505,7 @@ const OrderItemRow = ({
   showReturnButton,
   showReviewButton,
   showReturnPendingBadge,
+  showReturnStatusBadge,
   showReviewConfirmedBadge,
   onReturnItem,
   onAddReview,
@@ -546,6 +563,14 @@ const OrderItemRow = ({
           </View>
         ) : null}
 
+        {showReturnStatusBadge ? (
+          <View style={[styles.tag, { backgroundColor: "#E6F2FF" }]}>
+            <Text style={[styles.tagText, { color: "#0D47A1" }]}>
+              {item.itemStatus}
+            </Text>
+          </View>
+        ) : null}
+
         {showReviewConfirmedBadge ? (
           <View style={[styles.tag, { backgroundColor: "#E9F7EF" }]}>
             <Text style={[styles.tagText, { color: "#1B5E20" }]}>
@@ -584,7 +609,7 @@ const ProfilePage = () => {
 
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [selectedTab, setSelectedTab] = useState("All");
+  const [selectedTab, setSelectedTab] = useState("Pending");
 
   const [logoutAsk, setLogoutAsk] = useState(false);
   const [trackVisible, setTrackVisible] = useState(false);
@@ -675,7 +700,7 @@ const ProfilePage = () => {
       return base.filter((o) => o.status === ORDER_STATUS.PENDING);
     }
 
-    if (selectedTab === "Shipping") {
+    if (selectedTab === "Shipped") {
       return base.filter((o) =>
         [ORDER_STATUS.CONFIRMED, ORDER_STATUS.SHIPPED].includes(o.status),
       );
@@ -687,7 +712,13 @@ const ProfilePage = () => {
         .map((o) => ({
           ...o,
           items: (o.items || []).filter(
-            (it) => it.itemStatus !== ITEM_STATUS.RETURN_CONFIRMED,
+            (it) =>
+              ![
+                ITEM_STATUS.RETURN_CONFIRMED,
+                ITEM_STATUS.RETURN_COMPLETE,
+                ITEM_STATUS.REVIEWED,
+                ITEM_STATUS.CANCELED,
+              ].includes(it.itemStatus),
           ),
         }))
         .filter((o) => (o.items || []).length > 0);
@@ -697,26 +728,30 @@ const ProfilePage = () => {
       return base
         .map((o) => ({
           ...o,
-          items: (o.items || []).filter(
-            (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED,
+          items: (o.items || []).filter((it) =>
+            [
+              ITEM_STATUS.RETURN_CONFIRMED,
+              ITEM_STATUS.RETURN_COMPLETE,
+            ].includes(it.itemStatus),
           ),
         }))
         .filter((o) => (o.items || []).length > 0);
     }
 
     if (selectedTab === "Review") {
-      // Only review confirmed items
+      // Only reviewed items
       return base
         .map((o) => ({
           ...o,
           items: (o.items || []).filter(
-            (it) => it.reviewStatus === REVIEW_STATUS.CONFIRMED,
+            (it) =>
+              it.itemStatus === ITEM_STATUS.REVIEWED ||
+              it.reviewStatus === REVIEW_STATUS.CONFIRMED,
           ),
         }))
         .filter((o) => (o.items || []).length > 0);
     }
-
-    return base; // All
+    return [];
   }, [orders, selectedTab]);
 
   // Actions
@@ -823,30 +858,30 @@ const ProfilePage = () => {
     }
   };
 
-  const handleReturnOrder = async (orderId) => {
-    try {
-      const res = await axios.put(
-        `${SummaryApi.return_user_order.url}/${orderId}`,
-        {},
-        { withCredentials: true },
-      );
-      if (res.data?.success) {
-        setOrders((prev) =>
-          prev.map((o) =>
-            o._id === orderId ? { ...o, status: ORDER_STATUS.RETURN } : o,
-          ),
-        );
-        Toast.show({ type: "success", text1: "Return requested" });
-      } else {
-        Toast.show({
-          type: "error",
-          text1: res.data?.message || "Return failed",
-        });
-      }
-    } catch {
-      Toast.show({ type: "error", text1: "Network error" });
-    }
-  };
+  // const handleReturnOrder = async (orderId) => {
+  //   try {
+  //     const res = await axios.put(
+  //       `${SummaryApi.return_user_order.url}/${orderId}`,
+  //       {},
+  //       { withCredentials: true },
+  //     );
+  //     if (res.data?.success) {
+  //       setOrders((prev) =>
+  //         prev.map((o) =>
+  //           o._id === orderId ? { ...o, status: ORDER_STATUS.RETURN } : o,
+  //         ),
+  //       );
+  //       Toast.show({ type: "success", text1: "Return requested" });
+  //     } else {
+  //       Toast.show({
+  //         type: "error",
+  //         text1: res.data?.message || "Return failed",
+  //       });
+  //     }
+  //   } catch {
+  //     Toast.show({ type: "error", text1: "Network error" });
+  //   }
+  // };
 
   const handleReturnItem = async (orderId, itemId) => {
     try {
@@ -901,8 +936,10 @@ const ProfilePage = () => {
     const returnConfirmed = orders.reduce(
       (acc, o) =>
         acc +
-        (o.items || []).filter(
-          (it) => it.itemStatus === ITEM_STATUS.RETURN_CONFIRMED,
+        (o.items || []).filter((it) =>
+          [ITEM_STATUS.RETURN_CONFIRMED, ITEM_STATUS.RETURN_COMPLETE].includes(
+            it.itemStatus,
+          ),
         ).length,
       0,
     );
@@ -919,7 +956,7 @@ const ProfilePage = () => {
     const isShipped = order.status === ORDER_STATUS.SHIPPED;
     const isDelivered = order.status === ORDER_STATUS.DELIVERED;
 
-    const shippingTabOnlyTrack = selectedTab === "Shipping" && isConfirmed; // only Track
+    const shippingTabOnlyTrack = selectedTab === "Shipped" && isConfirmed; // only Track
     const deliveredTab = selectedTab === "Delivered";
     const returnTab = selectedTab === "Return";
     const reviewTab = selectedTab === "Review";
@@ -977,6 +1014,7 @@ const ProfilePage = () => {
           let showReviewBtn = false;
           let showReturnPendingBadge = false;
           let showReviewConfirmedBadge = false;
+          let showReturnStatusBadge = false;
 
           // Delivered tab:
           if (deliveredTab) {
@@ -1002,6 +1040,7 @@ const ProfilePage = () => {
             showReturnBtn = false;
             showReviewBtn = false;
             showReturnPendingBadge = false;
+            showReturnStatusBadge = true;
           }
 
           // Review tab: only review confirmed items (badge only)
@@ -1021,6 +1060,7 @@ const ProfilePage = () => {
               showReturnButton={showReturnBtn}
               showReviewButton={showReviewBtn}
               showReturnPendingBadge={showReturnPendingBadge}
+              showReturnStatusBadge={showReturnStatusBadge}
               showReviewConfirmedBadge={showReviewConfirmedBadge}
               onReturnItem={() => handleReturnItem(order._id, item._id)}
               onAddReview={() => openReview(order, item)}
@@ -1055,7 +1095,7 @@ const ProfilePage = () => {
               )}
 
               {/* Hide in Delivered; Confirmed = only Track; Shipped can Return */}
-              {(() => {
+              {/* {(() => {
                 if (selectedTab === "Delivered") return null;
                 if (shippingTabOnlyTrack) return null;
                 if (isShipped) {
@@ -1073,7 +1113,7 @@ const ProfilePage = () => {
                   );
                 }
                 return null;
-              })()}
+              })()} */}
             </View>
           );
         })()}
@@ -1139,7 +1179,7 @@ const ProfilePage = () => {
                 icon="clipboard-text-outline"
                 label="Orders"
                 value={stats.all}
-                onPress={() => setSelectedTab("All")}
+                onPress={() => setSelectedTab("Pending")}
               />
               <StatPill
                 icon="truck-delivery-outline"
@@ -1160,7 +1200,7 @@ const ProfilePage = () => {
               <QuickAction
                 icon="package-variant-closed"
                 label="My Orders"
-                onPress={() => setSelectedTab("All")}
+                onPress={() => setSelectedTab("Pending")}
               />
               <QuickAction
                 icon="map-marker-outline"
@@ -1209,29 +1249,20 @@ const ProfilePage = () => {
 
             {/* Tabs */}
             <View style={styles.tabsRow}>
-              {[
-                "All",
-                "Pending",
-                "Shipping",
-                "Delivered",
-                "Return",
-                "Review",
-              ].map((t) => (
-                <Chip
-                  key={t}
-                  label={t}
-                  active={selectedTab === t}
-                  onPress={() => setSelectedTab(t)}
-                />
-              ))}
+              {["Pending", "Shipped", "Delivered", "Return", "Review"].map(
+                (t) => (
+                  <Chip
+                    key={t}
+                    label={t}
+                    active={selectedTab === t}
+                    onPress={() => setSelectedTab(t)}
+                  />
+                ),
+              )}
             </View>
 
             {/* Section title */}
-            <Text style={styles.sectionTitle}>
-              {selectedTab === "All"
-                ? "Recent Orders"
-                : `${selectedTab} Orders`}
-            </Text>
+            <Text style={styles.sectionTitle}>{`${selectedTab} Orders`}</Text>
 
             {/* Loading / Empty */}
             {loadingOrders ? (
@@ -1338,9 +1369,28 @@ const ProfilePage = () => {
                   comment: payload?.text,
                   rating: payload?.rating,
                   images: payload?.images,
+                  itemStatus: "Reviewed",
                 },
               });
               if (res.data?.success) {
+                setOrders((prevOrders) =>
+                  prevOrders.map((order) =>
+                    order._id === selectedReviewItem?.orderId
+                      ? {
+                          ...order,
+                          items: (order.items || []).map((it) =>
+                            it._id === selectedReviewItem?._id
+                              ? {
+                                  ...it,
+                                  itemStatus: ITEM_STATUS.REVIEWED,
+                                  reviewStatus: REVIEW_STATUS.CONFIRMED,
+                                }
+                              : it,
+                          ),
+                        }
+                      : order,
+                  ),
+                );
                 Toast.show({ type: "success", text1: "Review submitted!" });
               } else {
                 Toast.show({

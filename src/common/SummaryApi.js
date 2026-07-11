@@ -176,6 +176,11 @@ const SummaryApi = {
     url: `${BASE_URL}/api/get-common-info`,
     method: "get",
   },
+
+  app_version: {
+    url: `${BASE_URL}/api/app-version`,
+    method: "get",
+  },
   googleLogin: {
     url: `${BASE_URL}/api/google-login`,
     method: "POST",

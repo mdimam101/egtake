@@ -23,11 +23,13 @@ const CategoryListBar = ({ onSelectCategory /*subCategory = "ALL"}*/ }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = async () => {
+    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
+
     setLoading(true);
     try {
       const res = await axios.get(SummaryApi.category_product.url, {
         headers: {
-          "x-client-key": process.env.EXPO_PUBLIC_CLIENT_KEY,
+          "x-client-key": clientKey,
         },
       });
       if (res.data.success) {
