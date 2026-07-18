@@ -45,7 +45,7 @@ const ORDER_STATUS = {
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
   RETURN: "Return",
-  CANCELLED: "Cancelled",
+  CANCELLED: "Canceled",
 };
 
 const ITEM_STATUS = {
@@ -53,9 +53,9 @@ const ITEM_STATUS = {
   PENDING: "Pending",
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
-  RETURN_PENDING: "Return Pending",
-  RETURN_CONFIRMED: "Return Confirmed",
-  RETURN_COMPLETE: "Return Complete",
+  RETURN_PENDING: "Return",
+  RETURN_CONFIRMED: "RConfirmed",
+  RETURN_COMPLETE: "ReturnComplete",
   REVIEWED: "Reviewed",
   CANCELED: "Canceled",
 };
@@ -85,6 +85,14 @@ const normalizeItemStatus = (s = "") => {
   if (t === "delivered") return ITEM_STATUS.DELIVERED;
   if (t === "pending") return ITEM_STATUS.PENDING;
   return s || ITEM_STATUS.NORMAL;
+};
+
+const getItemStatusLabel = (status = "") => {
+  const normalized = normalizeItemStatus(status);
+  if (normalized === ITEM_STATUS.RETURN_PENDING) return "Return Pending";
+  if (normalized === ITEM_STATUS.RETURN_CONFIRMED) return "Return Confirmed";
+  if (normalized === ITEM_STATUS.RETURN_COMPLETE) return "Return Complete";
+  return normalized;
 };
 
 const normalizeReviewStatus = (it = {}) => {
@@ -566,7 +574,7 @@ const OrderItemRow = ({
         {showReturnStatusBadge ? (
           <View style={[styles.tag, { backgroundColor: "#E6F2FF" }]}>
             <Text style={[styles.tagText, { color: "#0D47A1" }]}>
-              {item.itemStatus}
+              {getItemStatusLabel(item.itemStatus)}
             </Text>
           </View>
         ) : null}
@@ -1369,7 +1377,7 @@ const ProfilePage = () => {
                   comment: payload?.text,
                   rating: payload?.rating,
                   images: payload?.images,
-                  itemStatus: "Reviewed",
+                  itemStatus: ITEM_STATUS.REVIEWED,
                 },
               });
               if (res.data?.success) {

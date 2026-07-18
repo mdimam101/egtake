@@ -8,19 +8,22 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_CLIENT_KEY": "pyzarapyblickkeyblockaccessjhguygufkuylihiygiughiblkhgliughl"
+        "EXPO_PUBLIC_CLIENT_KEY": "pyzarapyblickkeyblockaccessjhguygufkuylihiygiughiblkhgliughl",
+        "EXPO_PUBLIC_APPS_URL": "https://api.pyzara.com"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_CLIENT_KEY": "pyzarapyblickkeyblockaccessjhguygufkuylihiygiughiblkhgliughl"
+        "EXPO_PUBLIC_CLIENT_KEY": "pyzarapyblickkeyblockaccessjhguygufkuylihiygiughiblkhgliughl",
+        "EXPO_PUBLIC_APPS_URL": "https://api.pyzara.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_CLIENT_KEY": "pyzarapyblickkeyblockaccessjhguygufkuylihiygiughiblkhgliughl"
+        "EXPO_PUBLIC_CLIENT_KEY": "pyzarapyblickkeyblockaccessjhguygufkuylihiygiughiblkhgliughl",
+        "EXPO_PUBLIC_APPS_URL": "https://api.pyzara.com"
       }
     }
   },
