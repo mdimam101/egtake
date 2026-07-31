@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -47,6 +47,8 @@ const sortCartItemsNewestFirst = (items = []) => {
   return [...items].sort((a, b) => getCartItemTime(b) - getCartItemTime(a));
 };
 
+const RECOMMENDED_PAGE_SIZE = 24;
+
 // cache-first merge: cache আগে দেখাবে, তারপর server থেকে শুধু নতুন/updated গুলো যোগ করবে
 const mergeCartArrays = (cacheArr = [], serverArr = []) => {
   const map = new Map();
@@ -71,7 +73,15 @@ const CartPage = () => {
   const [latestProducts, setLatestProducts] = useState([]);
   const [recoPhaseCart, setRecoPhaseCart] = useState([]); // first 6
   const [recoAllCart, setRecoAllCart] = useState([]); // full list
-  const recoDisplayCart = recoAllCart.length ? recoAllCart : recoPhaseCart;
+  const [recoVisibleCount, setRecoVisibleCount] = useState(
+    RECOMMENDED_PAGE_SIZE,
+  );
+  const recoSourceCart = recoAllCart.length ? recoAllCart : recoPhaseCart;
+  const recoDisplayCart = useMemo(
+    () => recoSourceCart.slice(0, recoVisibleCount),
+    [recoSourceCart, recoVisibleCount],
+  );
+  const recoHasMore = recoVisibleCount < recoSourceCart.length;
 
   const user = useSelector((state) => state?.userState?.user);
 
@@ -323,11 +333,28 @@ const CartPage = () => {
       return;
     }
     const first6 = recommendedProductList.slice(0, 6);
-    setRecoPhaseCart(first6);
+    setRecoVisibleCount(RECOMMENDED_PAGE_SIZE);
     setRecoAllCart([]);
     const id = setTimeout(() => setRecoAllCart(recommendedProductList), 0); // hobohobo
     return () => clearTimeout(id);
   }, [recommendedProductList]);
+
+  const handleScrollNearBottom = useCallback(
+    (event) => {
+      if (!recoHasMore) return;
+      const { contentOffset, contentSize, layoutMeasurement } =
+        event.nativeEvent;
+      const distanceFromBottom =
+        contentSize.height - (contentOffset.y + layoutMeasurement.height);
+
+      if (distanceFromBottom < 700) {
+        setRecoVisibleCount((prev) =>
+          Math.min(prev + RECOMMENDED_PAGE_SIZE, recoSourceCart.length),
+        );
+      }
+    },
+    [recoHasMore, recoSourceCart.length],
+  );
 
   // Memoize left/right split for recommended products
   const recoSplitCart = useMemo(() => {
@@ -347,6 +374,8 @@ const CartPage = () => {
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
         style={{ flex: 1 }}
+        onScroll={handleScrollNearBottom}
+        scrollEventThrottle={120}
       >
         {cartItems.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -406,19 +435,29 @@ const CartPage = () => {
             <View style={styles.masonryContainer}>
               <View style={styles.column}>
                 {recoSplitCart.left.map((item, index) => (
-                  <View key={`recoCart_L_${index}`} style={styles.cardWrapper}>
+                  <View
+                    key={(item.cardKey || item._id) + "_cart_L_" + index}
+                    style={styles.cardWrapper}
+                  >
                     <UserProductCart productData={item} />
                   </View>
                 ))}
               </View>
               <View style={styles.column}>
                 {recoSplitCart.right.map((item, index) => (
-                  <View key={`recoCart_R_${index}`} style={styles.cardWrapper}>
+                  <View
+                    key={(item.cardKey || item._id) + "_cart_R_" + index}
+                    style={styles.cardWrapper}
+                  >
                     <UserProductCart productData={item} />
                   </View>
                 ))}
               </View>
             </View>
+          )}
+
+          {recoHasMore && (
+            <Text style={styles.recoLoadText}>Loading more products...</Text>
           )}
         </View>
       </ScrollView>
@@ -494,16 +533,16 @@ const styles = StyleSheet.create({
   masonryContainer: {
     marginBottom: 60,
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
   },
   cardWrapper: {
     // width: "48%",
     // marginBottom: 16,
+    marginBottom: 4,
   },
+  recoLoadText: { textAlign: "center", color: "#666", paddingVertical: 14 },
   column: {
     width: "49.5%",
-    gap: 4,
   },
   heading: {
     fontSize: 18,

@@ -50,6 +50,7 @@ import ProductQualityViz from "../components/ProductQualityBlock";
 import ProductVideoSection from "../components/ProductVideoSection";
 
 const ROLLING_LIMIT = 3;
+const RECOMMENDED_PAGE_SIZE = 24;
 
 const Stars = ({ value = 0, size = 14 }) => (
   <View style={{ flexDirection: "row" }}>
@@ -117,7 +118,15 @@ const ProductDetails = ({ route }) => {
 
   const [recoPhase, setRecoPhase] = useState([]); // first 6
   const [recoAll, setRecoAll] = useState([]); // full list (next tick)
-  const recoDisplay = recoAll.length ? recoAll : recoPhase;
+  const [recoVisibleCount, setRecoVisibleCount] = useState(
+    RECOMMENDED_PAGE_SIZE,
+  );
+  const recoSource = recoAll.length ? recoAll : recoPhase;
+  const recoDisplay = useMemo(
+    () => recoSource.slice(0, recoVisibleCount),
+    [recoSource, recoVisibleCount],
+  );
+  const recoHasMore = recoVisibleCount < recoSource.length;
 
   const imageSliderRef = useRef();
   const scrollRef = useRef();
@@ -558,6 +567,15 @@ const ProductDetails = ({ route }) => {
 
   const ACTION_BAR_HEIGHT = 105;
 
+  const THUMBNAIL_GAP = 10;
+  const THUMBNAIL_SIZE = 50;
+  const thumbnailAreaWidth = screenWidth - 12;
+  const thumbnailCapacity = Math.max(
+    1,
+    Math.floor(thumbnailAreaWidth / (THUMBNAIL_SIZE + THUMBNAIL_GAP)),
+  );
+  const shouldGridVariants = data.variants?.length > thumbnailCapacity;
+
   useEffect(() => {
     if (
       !Array.isArray(recommendedProducts) ||
@@ -568,6 +586,7 @@ const ProductDetails = ({ route }) => {
       return;
     }
     const first6 = recommendedProducts.slice(0, 6);
+    setRecoVisibleCount(RECOMMENDED_PAGE_SIZE);
     setRecoPhase(first6);
     setRecoAll([]);
     const id = setTimeout(() => setRecoAll(recommendedProducts), 0); // home-এর মতো "hobohobo"
@@ -633,6 +652,23 @@ const ProductDetails = ({ route }) => {
     if (lines > 10) setIsTruncated(true);
   }, []);
 
+  const handleScrollNearBottom = useCallback(
+    (event) => {
+      if (!recoHasMore) return;
+      const { contentOffset, contentSize, layoutMeasurement } =
+        event.nativeEvent;
+      const distanceFromBottom =
+        contentSize.height - (contentOffset.y + layoutMeasurement.height);
+
+      if (distanceFromBottom < 700) {
+        setRecoVisibleCount((prev) =>
+          Math.min(prev + RECOMMENDED_PAGE_SIZE, recoSource.length),
+        );
+      }
+    },
+    [recoHasMore, recoSource.length],
+  );
+
   // product description normalizeNewline
   const normalizeNewlinesServer = (s = "") => {
     return String(s)
@@ -673,6 +709,8 @@ const ProductDetails = ({ route }) => {
         contentContainerStyle={{
           paddingBottom: ACTION_BAR_HEIGHT,
         }}
+        onScroll={handleScrollNearBottom}
+        scrollEventThrottle={120}
       >
         <View>
           <Animated.ScrollView
@@ -797,57 +835,93 @@ const ProductDetails = ({ route }) => {
           <Text style={styles.colorInfo}>Color: {selectedVariant.color}</Text>
         )}
 
-        {data.variants?.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.thumbnailRow}
-          >
-            {data.variants?.map((variant, idx) => {
-              const thumbImage = variant.images?.[0];
-              return (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => {
-                    setSelectedVariantIndex(idx);
-                    setSelectedSize(null);
-                    const newImg = variant.images?.[0];
-                    setSelectedImg(ensureHttps(newImg)); //setSelectedImg(newImg);
-                    const imgIndex = allImages.findIndex(
-                      (img) => canon(img) === canon(newImg), //(img) => img === newImg
-                    );
-                    if (imgIndex !== -1 && imageSliderRef.current) {
-                      imageSliderRef.current.scrollTo({
-                        x: screenWidth * imgIndex,
-                        animated: true,
-                      });
-                    }
-                  }}
-                  style={[
-                    styles.thumbnailBox,
-                    idx === selectedVariantIndex && styles.activeThumbnailBox,
-                  ]}
-                >
-                  {thumbImage && (
-                    // <Image
-                    //   source={{
-                    //     uri: ensureHttps(thumbImage),
-                    //   }}
-                    //   style={styles.thumbnailImage}
-                    // />
-                    <ExpoImage
-                      source={{ uri: ensureHttps(thumbImage) }}
-                      style={styles.thumbnailImage}
-                      cachePolicy="disk"
-                      allowDownscaling
-                      recycleMemory
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
+        {data.variants?.length > 1 &&
+          (shouldGridVariants ? (
+            <View style={styles.thumbnailGrid}>
+              {data.variants?.map((variant, idx) => {
+                const thumbImage = variant.images?.[0];
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      setSelectedVariantIndex(idx);
+                      setSelectedSize(null);
+                      const newImg = variant.images?.[0];
+                      setSelectedImg(ensureHttps(newImg));
+                      const imgIndex = allImages.findIndex(
+                        (img) => canon(img) === canon(newImg),
+                      );
+                      if (imgIndex !== -1 && imageSliderRef.current) {
+                        imageSliderRef.current.scrollTo({
+                          x: screenWidth * imgIndex,
+                          animated: true,
+                        });
+                      }
+                    }}
+                    style={[
+                      styles.thumbnailBox,
+                      idx === selectedVariantIndex && styles.activeThumbnailBox,
+                    ]}
+                  >
+                    {thumbImage && (
+                      <ExpoImage
+                        source={{ uri: ensureHttps(thumbImage) }}
+                        style={styles.thumbnailImage}
+                        cachePolicy="disk"
+                        allowDownscaling
+                        recycleMemory
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.thumbnailRow}
+              contentContainerStyle={styles.thumbnailStrip}
+            >
+              {data.variants?.map((variant, idx) => {
+                const thumbImage = variant.images?.[0];
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      setSelectedVariantIndex(idx);
+                      setSelectedSize(null);
+                      const newImg = variant.images?.[0];
+                      setSelectedImg(ensureHttps(newImg));
+                      const imgIndex = allImages.findIndex(
+                        (img) => canon(img) === canon(newImg),
+                      );
+                      if (imgIndex !== -1 && imageSliderRef.current) {
+                        imageSliderRef.current.scrollTo({
+                          x: screenWidth * imgIndex,
+                          animated: true,
+                        });
+                      }
+                    }}
+                    style={[
+                      styles.thumbnailBox,
+                      idx === selectedVariantIndex && styles.activeThumbnailBox,
+                    ]}
+                  >
+                    {thumbImage && (
+                      <ExpoImage
+                        source={{ uri: ensureHttps(thumbImage) }}
+                        style={styles.thumbnailImage}
+                        cachePolicy="disk"
+                        allowDownscaling
+                        recycleMemory
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ))}
 
         {/* ✅ Only show size options if available */}
         {isSizeAvailable && (
@@ -1468,7 +1542,7 @@ const ProductDetails = ({ route }) => {
           {/* 🔸 skeleton যখন recoDisplay ফাঁকা */}
           {!recoDisplay.length ? (
             <View style={styles.masonryContainer}>
-              <View className="left" style={styles.column}>
+              <View style={styles.column}>
                 {[...Array(8)]
                   .filter((_, idx) => idx % 2 === 0)
                   .map((_, i) => (
@@ -1477,7 +1551,7 @@ const ProductDetails = ({ route }) => {
                     </View>
                   ))}
               </View>
-              <View className="right" style={styles.column}>
+              <View style={styles.column}>
                 {[...Array(8)]
                   .filter((_, idx) => idx % 2 !== 0)
                   .map((_, i) => (
@@ -1492,7 +1566,10 @@ const ProductDetails = ({ route }) => {
             <View style={styles.masonryContainer}>
               <View style={styles.column}>
                 {recoSplit.left.map((item, index) => (
-                  <View key={`reco_L_${index}`} style={styles.cardWrapper}>
+                  <View
+                    key={(item.cardKey || item._id) + "_details_L_" + index}
+                    style={styles.cardWrapper}
+                  >
                     <UserProductCart
                       productData={item}
                       fromDetails={true}
@@ -1503,7 +1580,10 @@ const ProductDetails = ({ route }) => {
               </View>
               <View style={styles.column}>
                 {recoSplit.right.map((item, index) => (
-                  <View key={`reco_R_${index}`} style={styles.cardWrapper}>
+                  <View
+                    key={(item.cardKey || item._id) + "_details_R_" + index}
+                    style={styles.cardWrapper}
+                  >
                     <UserProductCart
                       productData={item}
                       fromDetails={true}
@@ -1513,6 +1593,10 @@ const ProductDetails = ({ route }) => {
                 ))}
               </View>
             </View>
+          )}
+
+          {recoHasMore && (
+            <Text style={styles.recoLoadText}>Loading more products...</Text>
           )}
         </View>
       </ScrollView>
@@ -1624,14 +1708,21 @@ const styles = StyleSheet.create({
   },
   productName: { fontSize: 18, fontWeight: "600", marginTop: 12 },
   colorInfo: { fontSize: 14, marginTop: 4, color: "#555" },
-  thumbnailRow: { flexDirection: "row", marginTop: 12 },
+  thumbnailRow: { marginTop: 12 },
+  thumbnailStrip: { flexDirection: "row", gap: 10 },
+  thumbnailGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 12,
+  },
   thumbnailBox: {
     width: 50,
     height: 50,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "#ccc",
-    marginRight: 12,
+    // marginRight: 12,
     overflow: "hidden",
   },
   activeThumbnailBox: { borderColor: "#ff5722", borderWidth: 2 },
@@ -1694,7 +1785,7 @@ const styles = StyleSheet.create({
   masonryContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    flexWrap: "wrap",
+    // flexWrap: "wrap",
     backgroundColor: "#EBEBEB",
   },
 
@@ -1793,11 +1884,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalButtonText: { fontWeight: "bold", color: "#fff", fontSize: 16 },
-  cardWrapper: {},
-  column: {
-    width: "49.5%",
-    gap: 4,
-  },
+  cardWrapper: { marginBottom: 4 },
+  recoLoadText: { textAlign: "center", color: "#666", paddingVertical: 14 },
+  column: { width: "49.5%" },
 
   //
 

@@ -1,9 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
+import { Image as ExpoImage } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -59,7 +59,7 @@ function UserProductCart({
       if (!alive) return;
 
       setResolvedHeight(
-        cardWidth * (typeof fresh === "number" ? fresh : DEFAULT_RATIO)
+        cardWidth * (typeof fresh === "number" ? fresh : DEFAULT_RATIO),
       );
       setResolving(false);
     })();
@@ -82,8 +82,8 @@ function UserProductCart({
     });
   };
 
-  let productName = productData?.spcProductName || productData?.productName
-  let selling = productData?.spcSelling || productData?.selling
+  let productName = productData?.spcProductName || productData?.productName;
+  let selling = productData?.spcSelling || productData?.selling;
 
   return (
     <TouchableOpacity
@@ -109,14 +109,18 @@ function UserProductCart({
           <ActivityIndicator size="small" />
         </View>
       ) : (
-        <Image
-          source={imageUrl ? { uri: imageUrl } : undefined}// "../assets/images/EgtakeLogo.png"
+        <ExpoImage
+          source={imageUrl ? { uri: imageUrl } : undefined}
           style={{
             width: "100%",
             height: resolvedHeight ?? cardWidth * DEFAULT_RATIO,
-            contentFit: "cover",
+            // contentFit: "cover",
             borderRadius: 8,
           }}
+          contentFit="cover"
+          cachePolicy="disk"
+          allowDownscaling
+          recycleMemory
           onError={() => setResolvedHeight(cardWidth * DEFAULT_RATIO)}
         />
       )}
