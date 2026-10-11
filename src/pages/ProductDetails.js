@@ -30,6 +30,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSelector } from "react-redux";
 import FullscreenImageModal from "../components/FullscreenImageModal";
+import GuidedCoachmark from "../components/GuidedCoachmark";
 import ImageWithSkeleton from "../components/ImageWithSkeleton";
 import handleWhatsApp from "../helper/handleWhatsApp";
 
@@ -48,9 +49,17 @@ import { CommonActions, useNavigation } from "@react-navigation/native";
 import BenefitsBar from "../components/BenefitsBar";
 import ProductQualityViz from "../components/ProductQualityBlock";
 import ProductVideoSection from "../components/ProductVideoSection";
+import usePurchaseGuidanceEligibility from "../hooks/usePurchaseGuidanceEligibility";
 
 const ROLLING_LIMIT = 3;
 const RECOMMENDED_PAGE_SIZE = 24;
+
+const formatSkinCareLabel = (value = "") =>
+  value
+    .toString()
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const Stars = ({ value = 0, size = 14 }) => (
   <View style={{ flexDirection: "row" }}>
@@ -96,6 +105,16 @@ const ProductDetails = ({ route }) => {
     sold: 0,
     sizeDetails: [],
     qualityType: "",
+    skinCareInfo: {
+      productType: "",
+      ingredients: [],
+      suitableSkinTypes: [],
+      targetConcerns: [],
+      avoidFor: [],
+      usageTime: "",
+      texture: "",
+      isNonComedogenic: false,
+    },
     productQA: [],
     productVideo: {},
   });
@@ -112,7 +131,9 @@ const ProductDetails = ({ route }) => {
     detail: "",
   });
   const [loading, setLoading] = useState(true);
+  const [hasScrolledForCoach, setHasScrolledForCoach] = useState(false);
   const user = useSelector((state) => state?.userState?.user);
+  const showPurchaseGuidance = usePurchaseGuidanceEligibility(user?._id);
 
   const commonInfo = useSelector((s) => s.commonState.commonInfoList);
 
@@ -133,6 +154,29 @@ const ProductDetails = ({ route }) => {
 
   // review details
   const [reviews, setReviews] = useState([]); // ← আগের undefined থেকে [] করলাম
+
+  // skin care info
+  const skinCareInfo = data?.skinCareInfo;
+  const skinIngredients = Array.isArray(skinCareInfo?.ingredients)
+    ? skinCareInfo.ingredients
+    : [];
+  const skinTypes = Array.isArray(skinCareInfo?.suitableSkinTypes)
+    ? skinCareInfo.suitableSkinTypes
+    : [];
+  const targetConcerns = Array.isArray(skinCareInfo?.targetConcerns)
+    ? skinCareInfo.targetConcerns
+    : [];
+  const avoidFor = Array.isArray(skinCareInfo?.avoidFor)
+    ? skinCareInfo.avoidFor
+    : [];
+
+  const hasSkinCareInfo = Boolean(
+    (skinCareInfo?.productType || "").trim() ||
+    skinIngredients.length ||
+    skinTypes.length ||
+    targetConcerns.length ||
+    avoidFor.length,
+  );
 
   // AI size recommend states
   const [showAiSizeBox, setShowAiSizeBox] = useState(false);
@@ -654,6 +698,9 @@ const ProductDetails = ({ route }) => {
 
   const handleScrollNearBottom = useCallback(
     (event) => {
+      if (event.nativeEvent.contentOffset.y > 90) {
+        setHasScrolledForCoach(true);
+      }
       if (!recoHasMore) return;
       const { contentOffset, contentSize, layoutMeasurement } =
         event.nativeEvent;
@@ -1329,6 +1376,163 @@ const ProductDetails = ({ route }) => {
           // onPressPoints={() => openCommitmentModal("Pyzara Points", "Earn points on every purchase and redeem later.")}
         />
 
+        {/* skin care info */}
+        {hasSkinCareInfo && data?.skinCareInfo && (
+          <View style={styles.skinCareCard}>
+            <LinearGradient
+              colors={["#ecfdf5", "#f8fafc"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.skinCareHeader}
+            >
+              <View style={styles.skinCareIconWrap}>
+                <Ionicons name="leaf-outline" size={20} color="#047857" />
+              </View>
+              <View style={styles.skinCareHeaderCopy}>
+                <Text style={styles.skinCareTitle}>Skin Care Information</Text>
+                <Text style={styles.skinCareSubtitle}>
+                  Know what works for your skin
+                </Text>
+              </View>
+              <View style={styles.skinCareVerifiedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#047857" />
+                <Text style={styles.skinCareVerifiedText}>Details</Text>
+              </View>
+            </LinearGradient>
+
+            <View style={styles.skinCareBody}>
+              {data.skinCareInfo.productType ? (
+                <View style={styles.skinCareProductTypeRow}>
+                  <Text style={styles.skinCareSectionLabel}>PRODUCT TYPE</Text>
+                  <Text style={styles.skinCareProductType}>
+                    {data.skinCareInfo.productType}
+                  </Text>
+                </View>
+              ) : null}
+
+              {data.skinCareInfo.ingredients?.length > 0 ? (
+                <View style={styles.skinCareSection}>
+                  <View style={styles.skinCareSectionHeading}>
+                    <Ionicons name="flask-outline" size={16} color="#475569" />
+                    <Text style={styles.skinCareSectionTitle}>Ingredients</Text>
+                  </View>
+                  <Text style={styles.skinCareIngredients}>
+                    {data.skinCareInfo.ingredients.join(", ")}
+                  </Text>
+                </View>
+              ) : null}
+
+              {data.skinCareInfo.suitableSkinTypes?.length > 0 ? (
+                <View style={styles.skinCareSection}>
+                  <Text style={styles.skinCareSectionTitle}>
+                    Suitable Skin Types
+                  </Text>
+                  <View style={styles.skinCareChipRow}>
+                    {data.skinCareInfo.suitableSkinTypes.map((skinType) => (
+                      <View
+                        key={skinType}
+                        style={[
+                          styles.skinCareChip,
+                          styles.skinCareSuitableChip,
+                        ]}
+                      >
+                        <Ionicons
+                          name="water-outline"
+                          size={13}
+                          color="#047857"
+                        />
+                        <Text style={styles.skinCareSuitableChipText}>
+                          {formatSkinCareLabel(skinType)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              {data.skinCareInfo.targetConcerns?.length > 0 ? (
+                <View style={styles.skinCareSection}>
+                  <Text style={styles.skinCareSectionTitle}>
+                    Targets & Benefits
+                  </Text>
+                  <View style={styles.skinCareChipRow}>
+                    {data.skinCareInfo.targetConcerns.map((concern) => (
+                      <View key={concern} style={styles.skinCareChip}>
+                        <Text style={styles.skinCareChipText}>
+                          {formatSkinCareLabel(concern)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              {data.skinCareInfo.avoidFor?.length > 0 ? (
+                <View style={styles.skinCareCautionBox}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={18}
+                    color="#b45309"
+                  />
+                  <View style={styles.skinCareCautionCopy}>
+                    <Text style={styles.skinCareCautionTitle}>
+                      Use with care
+                    </Text>
+                    <Text style={styles.skinCareCautionText}>
+                      Avoid for:{" "}
+                      {data.skinCareInfo.avoidFor
+                        .map(formatSkinCareLabel)
+                        .join(", ")}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              <View style={styles.skinCareFactsRow}>
+                {data.skinCareInfo.usageTime ? (
+                  <View style={styles.skinCareFact}>
+                    <Ionicons name="sunny-outline" size={18} color="#d97706" />
+                    <Text style={styles.skinCareFactLabel}>Usage</Text>
+                    <Text style={styles.skinCareFactValue}>
+                      {data.skinCareInfo.usageTime}
+                    </Text>
+                  </View>
+                ) : null}
+                {data.skinCareInfo.texture ? (
+                  <View
+                    style={[styles.skinCareFact, styles.skinCareTextureFact]}
+                  >
+                    <Ionicons
+                      name="sparkles-outline"
+                      size={18}
+                      color="#7c3aed"
+                    />
+                    <Text style={styles.skinCareFactLabel}>Texture</Text>
+                    <Text style={styles.skinCareFactValue} numberOfLines={2}>
+                      {data.skinCareInfo.texture}
+                    </Text>
+                  </View>
+                ) : null}
+                {typeof data.skinCareInfo.isNonComedogenic === "boolean" ? (
+                  <View style={styles.skinCareFact}>
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={18}
+                      color="#0284c7"
+                    />
+                    <Text style={styles.skinCareFactLabel}>
+                      Non-Comedogenic
+                    </Text>
+                    <Text style={styles.skinCareFactValue}>
+                      {data.skinCareInfo.isNonComedogenic ? "Yes" : "No"}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          </View>
+        )}
+
         <Modal
           visible={modalVisible}
           transparent
@@ -1337,10 +1541,34 @@ const ProductDetails = ({ route }) => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{selectedCommitment.title}</Text>
-              <Text style={styles.modalDetail}>
-                {selectedCommitment.detail}
-              </Text>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {selectedCommitment.title}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close details"
+                  hitSlop={12}
+                  onPress={() => setModalVisible(false)}
+                  style={styles.modalCloseIcon}
+                >
+                  <Ionicons name="close" size={22} color="#334155" />
+                </Pressable>
+              </View>
+              <View style={styles.modalDivider} />
+              <ScrollView
+                style={styles.modalScrollView}
+                contentContainerStyle={styles.modalScrollContent}
+                showsVerticalScrollIndicator
+                persistentScrollbar
+                nestedScrollEnabled
+                bounces
+              >
+                <Text style={styles.modalDetail}>
+                  {selectedCommitment.detail}
+                </Text>
+              </ScrollView>
               <Pressable
                 style={styles.modalButton}
                 onPress={() => setModalVisible(false)}
@@ -1644,6 +1872,15 @@ const ProductDetails = ({ route }) => {
           </Text>
         </TouchableOpacity>
       </View>
+      <GuidedCoachmark
+        enabled={hasScrolledForCoach && !loading && showPurchaseGuidance}
+        message="পছন্দের পণ্যটি কিনতে ‘Add to Cart’ বাটনে চাপ দিন।"
+        bottom={65}
+        right={8}
+        width={270}
+        targetWidth={220}
+        targetRight={0}
+      />
     </View>
   );
 };
@@ -1863,6 +2100,160 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  // skin care style
+  skinCareCard: {
+    marginTop: 12,
+    marginHorizontal: 4,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#dbe7e2",
+    borderRadius: 20,
+    shadowColor: "#0f5132",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  skinCareHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#d1fae5",
+  },
+  skinCareIconWrap: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 13,
+    backgroundColor: "#d1fae5",
+  },
+  skinCareHeaderCopy: { flex: 1, marginLeft: 11 },
+  skinCareTitle: { color: "#0f172a", fontSize: 17, fontWeight: "700" },
+  skinCareSubtitle: { color: "#64748b", fontSize: 11.5, marginTop: 2 },
+  skinCareVerifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "rgba(209,250,229,0.8)",
+  },
+  skinCareVerifiedText: { color: "#047857", fontSize: 10.5, fontWeight: "700" },
+  skinCareBody: { padding: 16 },
+  skinCareProductTypeRow: {
+    padding: 13,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderLeftWidth: 3,
+    borderLeftColor: "#10b981",
+  },
+  skinCareSectionLabel: {
+    color: "#059669",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  skinCareProductType: {
+    color: "#1e293b",
+    fontSize: 14.5,
+    fontWeight: "600",
+    lineHeight: 21,
+    marginTop: 4,
+  },
+  skinCareSection: { marginTop: 17 },
+  skinCareSectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  skinCareSectionTitle: { color: "#334155", fontSize: 13.5, fontWeight: "700" },
+  skinCareIngredients: {
+    color: "#475569",
+    fontSize: 13,
+    lineHeight: 21,
+    marginTop: 8,
+  },
+  skinCareChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 9,
+  },
+  skinCareChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#f1f5f9",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#e2e8f0",
+  },
+  skinCareChipText: { color: "#475569", fontSize: 11.5, fontWeight: "600" },
+  skinCareSuitableChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ecfdf5",
+    borderColor: "#a7f3d0",
+  },
+  skinCareSuitableChipText: {
+    color: "#047857",
+    fontSize: 11.5,
+    fontWeight: "700",
+  },
+  skinCareCautionBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+    padding: 12,
+    marginTop: 17,
+    borderRadius: 14,
+    backgroundColor: "#fffbeb",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#fde68a",
+  },
+  skinCareCautionCopy: { flex: 1 },
+  skinCareCautionTitle: { color: "#92400e", fontSize: 12.5, fontWeight: "700" },
+  skinCareCautionText: {
+    color: "#a16207",
+    fontSize: 11.5,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  skinCareFactsRow: { flexDirection: "row", gap: 7, marginTop: 17 },
+  skinCareFact: {
+    flex: 1,
+    minHeight: 88,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    paddingVertical: 9,
+    borderRadius: 13,
+    backgroundColor: "#f8fafc",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#e2e8f0",
+  },
+  skinCareTextureFact: { flex: 1.35 },
+  skinCareFactLabel: {
+    color: "#64748b",
+    fontSize: 9.5,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 5,
+  },
+  skinCareFactValue: {
+    color: "#1e293b",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 14,
+    textAlign: "center",
+    marginTop: 2,
+  },
+
   // modal style
   modalOverlay: {
     flex: 1,
@@ -1871,17 +2262,76 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "#fff",
-    padding: 24,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    maxHeight: "82%",
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  modalDetail: { fontSize: 16, marginBottom: 20 },
-  modalButton: {
-    backgroundColor: "#ff5722",
-    padding: 12,
-    borderRadius: 8,
+  modalHandle: {
+    width: 42,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#cbd5e1",
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  modalHeader: {
+    minHeight: 40,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: {
+    flex: 1,
+    color: "#0f172a",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.1,
+    marginRight: 12,
+  },
+  modalCloseIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
+  },
+  modalDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#e2e8f0",
+    marginTop: 10,
+  },
+  modalScrollView: {
+    flexShrink: 1,
+    marginVertical: 14,
+  },
+  modalScrollContent: {
+    paddingRight: 8,
+  },
+  modalDetail: {
+    color: "#334155",
+    fontSize: 16,
+    lineHeight: 25,
+  },
+
+  modalButton: {
+    backgroundColor: "#15803d",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    shadowColor: "#15803d",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   modalButtonText: { fontWeight: "bold", color: "#fff", fontSize: 16 },
   cardWrapper: { marginBottom: 4 },

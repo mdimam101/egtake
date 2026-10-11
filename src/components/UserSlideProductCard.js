@@ -31,12 +31,10 @@ const UserSlideProductCard = ({
   const deviceId = false;
   const userAlreadyPurchase = false;
   let isPurchese = deviceId || userAlreadyPurchase;
-  let selling = productData?.spcSelling || productData?.selling
+  let selling = productData?.spcSelling || productData?.selling;
 
   let setSellingPr =
-    selling <= 150 && isFreeCampaing && !isPurchese
-      ? "Free"
-      : `৳${selling}`;
+    selling <= 100 && isFreeCampaing && !isPurchese ? "Free" : `৳${selling}`;
 
   return (
     <TouchableOpacity

@@ -2,12 +2,11 @@
   "expo": {
     "name": "Pyzara",
     "slug": "test-eas-upload",
-    "version": "7.1.0",
+    "version": "8.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/EgtakeLogo.png",
     "scheme": "testeasupload",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -16,7 +15,6 @@
         "foregroundImage": "./assets/images/egtakeIcon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.emamexp2.testeasupload",
       "permissions": ["CAMERA"],
       "blockedPermissions": [
@@ -48,7 +46,10 @@
           "cameraPermission": "Pyzara needs camera access so you can take a skin photo for AI skincare suggestions.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

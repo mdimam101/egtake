@@ -65,38 +65,41 @@ export default function ReviewsScreen({ route, navigation }) {
   const closeViewer = () => setViewerOpen(false);
 
   // --- Fetch ---
-  const fetchReviews = useCallback(async (nextPage = 1) => {
-    try {
-      // 🔸 যদি SummaryApi.get_product_reviews ফাংশন হয় (id থেকে url দেয়)
-      // const url = SummaryApi.get_product_reviews(productId, nextPage, PAGE_SIZE)
-      //   অথবা
-      // const url = SummaryApi.get_product_reviews(productId);  // simple
+  const fetchReviews = useCallback(
+    async (nextPage = 1) => {
+      try {
+        // 🔸 যদি SummaryApi.get_product_reviews ফাংশন হয় (id থেকে url দেয়)
+        // const url = SummaryApi.get_product_reviews(productId, nextPage, PAGE_SIZE)
+        //   অথবা
+        // const url = SummaryApi.get_product_reviews(productId);  // simple
 
-      // নিচের উদাহরণ: যদি SummaryApi.get_product_reviews একটি helper হয় যা URL রিটার্ন করে:
-      const url =
-        typeof SummaryApi.get_product_reviews === "function"
-          ? SummaryApi.get_product_reviews(productId, nextPage, PAGE_SIZE)
-          : `${SummaryApi.get_product_reviews.url}?productId=${productId}&page=${nextPage}&limit=${PAGE_SIZE}`;
+        // নিচের উদাহরণ: যদি SummaryApi.get_product_reviews একটি helper হয় যা URL রিটার্ন করে:
+        const url =
+          typeof SummaryApi.get_product_reviews === "function"
+            ? SummaryApi.get_product_reviews(productId, nextPage, PAGE_SIZE)
+            : `${SummaryApi.get_product_reviews.url}?productId=${productId}&page=${nextPage}&limit=${PAGE_SIZE}`;
 
-      const res = await axios.get(url, { withCredentials: true });
+        const res = await axios.get(url, { withCredentials: true });
 
-      // ✅ two patterns support:
-      // 1) { success, data: [], hasMore }
-      // 2) { reviews: [], hasMore } – যেটা আছে ইউজ করো
-      const list = res.data?.data || res.data?.reviews || [];
-      const more =
-        typeof res.data?.hasMore === "boolean"
-          ? res.data.hasMore
-          : list.length === PAGE_SIZE;
+        // ✅ two patterns support:
+        // 1) { success, data: [], hasMore }
+        // 2) { reviews: [], hasMore } – যেটা আছে ইউজ করো
+        const list = res.data?.data || res.data?.reviews || [];
+        const more =
+          typeof res.data?.hasMore === "boolean"
+            ? res.data.hasMore
+            : list.length === PAGE_SIZE;
 
-      setReviews((prev) => (nextPage === 1 ? list : [...prev, ...list]));
-      setHasMore(more);
-    } catch (e) {
-      // console.log("reviews fetch error", e?.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [productId]);
+        setReviews((prev) => (nextPage === 1 ? list : [...prev, ...list]));
+        setHasMore(more);
+      } catch {
+        // Keep the current list visible when loading another page fails.
+      } finally {
+        setLoading(false);
+      }
+    },
+    [productId],
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -119,7 +122,7 @@ export default function ReviewsScreen({ route, navigation }) {
     const total = reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0);
     const a = Math.round((total / reviews.length) * 10) / 10;
     const d = [1, 2, 3, 4, 5].map(
-      (star) => reviews.filter((r) => Math.round(r.rating) === star).length
+      (star) => reviews.filter((r) => Math.round(r.rating) === star).length,
     );
     return { avg: a, count: reviews.length, dist: d };
   }, [reviews]);
@@ -139,7 +142,11 @@ export default function ReviewsScreen({ route, navigation }) {
         {!!item.comment && <Text style={styles.comment}>{item.comment}</Text>}
 
         {images.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 8 }}
+          >
             {images.map((url, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -157,9 +164,12 @@ export default function ReviewsScreen({ route, navigation }) {
   };
 
   return (
-    <View style={{  backgroundColor: "#fff" }}>
+    <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
           <Ionicons name="chevron-back" size={22} color="#111" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
@@ -202,10 +212,15 @@ export default function ReviewsScreen({ route, navigation }) {
         </View>
       ) : (
         <FlatList
+          style={styles.reviewsList}
           data={reviews}
           keyExtractor={(it, i) => it._id || String(i)}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={styles.reviewsListContent}
+          showsVerticalScrollIndicator
+          persistentScrollbar
+          nestedScrollEnabled
+          bounces
           onEndReachedThreshold={0.4}
           onEndReached={loadMore}
           ListFooterComponent={
@@ -238,6 +253,17 @@ export default function ReviewsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  reviewsList: {
+    flex: 1,
+  },
+  reviewsListContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
+  },
   header: {
     paddingTop: 48,
     paddingBottom: 12,
@@ -256,7 +282,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.06)",
   },
-  headerTitle: { flex: 1, textAlign: "center", fontWeight: "700", fontSize: 18, color: "#111" },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontWeight: "700",
+    fontSize: 18,
+    color: "#111",
+  },
 
   summaryRow: {
     flexDirection: "row",

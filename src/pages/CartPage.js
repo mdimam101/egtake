@@ -14,9 +14,11 @@ import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
 import { canon } from "../common/urlUtils";
 import CartItem from "../components/CartItem";
+import GuidedCoachmark from "../components/GuidedCoachmark";
 import SkeletonCard from "../components/SkeletonCard";
 import UserProductCart from "../components/UserProductCart";
 import { GUEST_CART_KEY } from "../helper/guestCart";
+import usePurchaseGuidanceEligibility from "../hooks/usePurchaseGuidanceEligibility";
 
 // identity: productId + image + size + color (server/guest উভয় শেপেই কাজ করবে)
 const getIdentity = (item) => {
@@ -82,6 +84,8 @@ const CartPage = () => {
     [recoSourceCart, recoVisibleCount],
   );
   const recoHasMore = recoVisibleCount < recoSourceCart.length;
+
+  const showPurchaseGuidance = usePurchaseGuidanceEligibility(user?._id);
 
   const user = useSelector((state) => state?.userState?.user);
 
@@ -497,6 +501,16 @@ const CartPage = () => {
           </TouchableOpacity>
         </View>
       )}
+      <GuidedCoachmark
+        enabled={cartItems.length > 0 && canCheckout && showPurchaseGuidance}
+        message="অর্ডারের ঠিকানা দিতে ‘Checkout’ বাটনে চাপ দিন।"
+        bottom={92}
+        right={8}
+        width={268}
+        targetWidth={158}
+        targetRight={0}
+        delay={650}
+      />
     </View>
   );
 };

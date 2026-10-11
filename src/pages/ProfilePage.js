@@ -33,6 +33,8 @@ import Context from "../context";
 import updateProductStock from "../helper/updateProductStock";
 import { setUserDetails } from "../store/userSlice";
 
+import { markUserHasOrder } from "../hooks/usePurchaseGuidanceEligibility";
+
 // 🆕 Support config (replace with your real numbers)
 // const SUPPORT_PHONE = "+8801712345678";
 // const WHATSAPP_PHONE = "+817045439721";
@@ -658,6 +660,9 @@ const ProfilePage = () => {
           })),
         }));
         setOrders(normalized);
+        if (normalized.length > 0) {
+          markUserHasOrder(user?._id);
+        }
       } else {
         Toast.show({
           type: "error",
@@ -672,7 +677,7 @@ const ProfilePage = () => {
     } finally {
       setLoadingOrders(false);
     }
-  }, []);
+  }, [user?._id]);
 
   // AI skin care
   // const fetchSkinCareProducts = useCallback(async () => {

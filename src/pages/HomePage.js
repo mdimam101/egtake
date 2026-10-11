@@ -34,6 +34,17 @@ import { setUnder99List } from "../store/under99Slice";
 
 const PAGE_SIZE = 24;
 
+// Home sliders show one representative card per product. The full category
+// views intentionally keep every optimized variant, just like the For You grid.
+const uniqueProductsById = (products = []) => {
+  const seen = new Set();
+  return products.filter((product) => {
+    if (!product?._id || seen.has(product._id)) return false;
+    seen.add(product._id);
+    return true;
+  });
+};
+
 // Home Page
 const HomePage = () => {
   const [loading, setLoading] = useState(true);
@@ -131,44 +142,23 @@ const HomePage = () => {
           }
           dispatch(setHandCraftList(handCraftUnique));
 
-          // Sales (latest→oldest) + de-dup by _id
+          // Sales (latest→oldest), retaining every variant for View More
           const salesSorted = optimized
             .filter((p) => p.salesOn)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenS = new Set();
-          const salesUnique = [];
-          for (const it of salesSorted) {
-            if (seenS.has(it._id)) continue;
-            seenS.add(it._id);
-            salesUnique.push(it);
-          }
-          dispatch(setSalesList(salesUnique));
+          dispatch(setSalesList(salesSorted));
 
-          // Trending (latest→oldest) + de-dup by _id
+          // Trending (latest→oldest), retaining every variant for View More
           const trendingSorted = optimized
             .filter((p) => p.trandingProduct)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenT = new Set();
-          const trendingUnique = [];
-          for (const it of trendingSorted) {
-            if (seenT.has(it._id)) continue;
-            seenT.add(it._id);
-            trendingUnique.push(it);
-          }
-          dispatch(setTrendingList(trendingUnique));
+          dispatch(setTrendingList(trendingSorted));
 
-          // Under99 (latest→oldest) + de-dup by _id
+          // 0~199 (latest→oldest), retaining every variant for View More
           const under99Sorted = optimized
-            .filter((p) => (p.selling ?? Infinity) <= 150)
+            .filter((p) => (p.selling ?? Infinity) <= 199)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenU = new Set();
-          const under99Unique = [];
-          for (const it of under99Sorted) {
-            if (seenU.has(it._id)) continue;
-            seenU.add(it._id);
-            under99Unique.push(it);
-          }
-          dispatch(setUnder99List(under99Unique));
+          dispatch(setUnder99List(under99Sorted));
         } catch {}
       }
 
@@ -210,44 +200,23 @@ const HomePage = () => {
           }
           dispatch(setHandCraftList(handCraftUnique2));
 
-          //when needUpdate Sales  (latest→oldest) + de-dup by _id
-          const SalesSorted = optimized
+          // Sales: keep all variants for the expanded grid
+          const salesSorted = optimized
             .filter((p) => p.salesOn)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenS2 = new Set();
-          const salesUnique2 = [];
-          for (const it of SalesSorted) {
-            if (seenS2.has(it._id)) continue;
-            seenS2.add(it._id);
-            salesUnique2.push(it);
-          }
-          dispatch(setSalesList(salesUnique2));
+          dispatch(setSalesList(salesSorted));
 
-          //when needUpdate trending  (latest→oldest) + de-dup by _id
+          // Trending: keep all variants for the expanded grid
           const trendingSorted = optimized
             .filter((p) => p.trandingProduct)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenT2 = new Set();
-          const trendingUnique2 = [];
-          for (const it of trendingSorted) {
-            if (seenT2.has(it._id)) continue;
-            seenT2.add(it._id);
-            trendingUnique2.push(it);
-          }
-          dispatch(setTrendingList(trendingUnique2));
+          dispatch(setTrendingList(trendingSorted));
 
-          //when needUpdate Under99  (latest→oldest) + de-dup by _id
+          // 0~199: keep all variants for the expanded grid
           const under99Sorted = optimized
-            .filter((p) => (p.selling ?? Infinity) <= 150)
+            .filter((p) => (p.selling ?? Infinity) <= 199)
             .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenU2 = new Set();
-          const under99Unique2 = [];
-          for (const it of under99Sorted) {
-            if (seenU2.has(it._id)) continue;
-            seenU2.add(it._id);
-            under99Unique2.push(it);
-          }
-          dispatch(setUnder99List(under99Unique2));
+          dispatch(setUnder99List(under99Sorted));
         }
       }
     } catch (err) {
@@ -503,7 +472,9 @@ const HomePage = () => {
 
     if (!targetSlide || !selectCat) return null;
 
-    const limitedList = targetSlide.slice(0, 4);
+    // A compact slider keeps only the first/main variant of each product.
+    // The source stored in Redux remains variant-complete for View More.
+    const limitedList = uniqueProductsById(targetSlide).slice(0, 4);
     const displayList = [...limitedList, { isLast: true }];
 
     return (

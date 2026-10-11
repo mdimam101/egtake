@@ -20,16 +20,24 @@ import { useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
 import CheckoutItemCard from "../components/CheckoutItemCard";
 import CustomDropdown from "../components/CustomDropdown"; // keep your existing component
+import GuidedCoachmark from "../components/GuidedCoachmark";
 import SuccessModal from "../components/SuccessModal";
 import Context from "../context";
 import deleteCartItemWhenOrderplace from "../helper/deleteCartItemWhenOrderplace";
 import { GUEST_CART_KEY } from "../helper/guestCart";
 import { trackBasic } from "../helper/trackBasic";
 import updateProductStock from "../helper/updateProductStock";
+import usePurchaseGuidanceEligibility from "../hooks/usePurchaseGuidanceEligibility";
 
 const PLACEHOLDER_COLOR = "#999";
 // payment gat way server coast etc
 const PROCESSING_FEE = 5;
+
+const normalizeBangladeshiPhone = (value = "") => {
+  const digits = value.toString().replace(/\D/g, "");
+  const localNumber = digits.startsWith("8801") ? digits.slice(2) : digits;
+  return localNumber.slice(0, 11);
+};
 
 const CheckoutPage = () => {
   const navigation = useNavigation();
@@ -47,6 +55,8 @@ const CheckoutPage = () => {
   const submitLockRef = useRef(false); // extra guard against rapid taps
   const user = useSelector((state) => state?.userState?.user);
 
+  const showPurchaseGuidance = usePurchaseGuidanceEligibility(user?._id);
+
   const commonInfo = useSelector((s) => s.commonState.commonInfoList);
 
   const MIN_FREE_NAR = commonInfo[0]?.nrGanjMiniOrdr
@@ -62,12 +72,12 @@ const CheckoutPage = () => {
     name: "",
     phone: "",
     address: "",
-    district: "", // Dhaka | Narayanganj | Others
+    district: "", // One of Bangladesh's 64 districts
     upazila: "", // only for Narayanganj
   });
 
   // ✅ delivery option: "FREE" | "EXPRESS" | "NAR120" | "STD"
-  //  - STD: non-Narayanganj standard (Dhaka/Others) under threshold
+  //  - STD: standard delivery outside the Narayanganj premium/express options
   const [deliveryOption, setDeliveryOption] = useState("FREE");
   const [userTouchedDelivery, setUserTouchedDelivery] = useState(false);
 
@@ -88,7 +98,7 @@ const CheckoutPage = () => {
           setFormData((prev) => ({
             ...prev,
             name: ship.name || "",
-            phone: ship.phone || "",
+            phone: normalizeBangladeshiPhone(ship.phone),
             address: ship.address || "",
             district: ship.district || "",
             upazila: "", //infuture will be add
@@ -108,7 +118,7 @@ const CheckoutPage = () => {
   const districtCharge = (district) => {
     if (district === "Narayanganj") return 70;
     if (district === "Dhaka") return 80;
-    if (district === "Others") return 130;
+    if (district) return 130;
     return 0;
   };
 
@@ -245,10 +255,13 @@ const CheckoutPage = () => {
 
     const { name, phone, address, district, upazila } = formData;
     const newErrors = {};
-    if (!name) newErrors.name = "Full name is required";
+    if (!name.trim()) newErrors.name = "Full name is required";
     if (!phone) newErrors.phone = "Phone number is required";
+    else if (!/^01[3-9]\d{8}$/.test(phone)) {
+      newErrors.phone = "Enter a valid 11-digit Bangladeshi number";
+    }
     if (!district) newErrors.district = "Please select your district";
-    if (!address) newErrors.address = "Full address is required";
+    if (!address.trim()) newErrors.address = "Full address is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -397,30 +410,64 @@ const CheckoutPage = () => {
 
         {/* Shipping form */}
         <View style={styles.shippingSection}>
-          <Text style={styles.sectionTitle}>🚚 Shipping Details</Text>
+          <View style={styles.shippingHeader}>
+            <View style={styles.shippingHeaderIcon}>
+              <Ionicons name="location-outline" size={21} color="#1d4ed8" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.shippingTitle}>Shipping Details</Text>
+              <Text style={styles.shippingSubtitle}>
+                Where should we deliver your order?
+              </Text>
+            </View>
+            <View style={styles.secureBadge}>
+              <Ionicons name="shield-checkmark" size={13} color="#047857" />
+              <Text style={styles.secureBadgeText}>Secure</Text>
+            </View>
+          </View>
 
-          <TextInput
-            placeholder="Full Name"
-            placeholderTextColor={PLACEHOLDER_COLOR}
-            value={formData.name}
-            onChangeText={(val) => handleInputChange("name", val)}
-            style={[styles.input, errors.name && styles.inputError]}
-            editable={!isSubmitting}
-          />
+          <Text style={styles.fieldLabel}>Full name</Text>
+          <View style={[styles.inputShell, errors.name && styles.inputError]}>
+            <Ionicons name="person-outline" size={18} color="#64748b" />
+            <TextInput
+              placeholder="Enter your full name"
+              placeholderTextColor={PLACEHOLDER_COLOR}
+              value={formData.name}
+              onChangeText={(val) => handleInputChange("name", val)}
+              style={styles.premiumInput}
+              editable={!isSubmitting}
+              autoCapitalize="words"
+              autoComplete="name"
+            />
+          </View>
           {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
 
-          <TextInput
-            placeholder="Phone"
-            placeholderTextColor={PLACEHOLDER_COLOR}
-            keyboardType="phone-pad"
-            value={formData.phone}
-            onChangeText={(val) => handleInputChange("phone", val)}
-            style={[styles.input, errors.phone && styles.inputError]}
-            editable={!isSubmitting}
-          />
+          <Text style={styles.fieldLabel}>Phone number</Text>
+          <View style={[styles.inputShell, errors.phone && styles.inputError]}>
+            <View style={styles.phonePrefix}>
+              <Text style={styles.flagText}>🇧🇩</Text>
+              <Text style={styles.phonePrefixText}>+88</Text>
+            </View>
+            <View style={styles.inputDivider} />
+            <TextInput
+              placeholder="01XXXXXXXXX"
+              placeholderTextColor={PLACEHOLDER_COLOR}
+              keyboardType="number-pad"
+              value={formData.phone}
+              onChangeText={(val) =>
+                handleInputChange("phone", normalizeBangladeshiPhone(val))
+              }
+              style={styles.premiumInput}
+              editable={!isSubmitting}
+              maxLength={11}
+              autoComplete="tel"
+            />
+            <Text style={styles.phoneCount}>{formData.phone.length}/11</Text>
+          </View>
           {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
           {/* District dropdown (existing CustomDropdown) */}
+          <Text style={styles.fieldLabel}>Select area</Text>
           <CustomDropdown
             selected={formData.district}
             onSelect={(val) => {
@@ -430,21 +477,44 @@ const CheckoutPage = () => {
                 handleInputChange("upazila", "");
               }
             }}
-            style={[styles.input, errors.district && styles.inputError]}
+            style={[
+              styles.premiumDropdown,
+              errors.district && styles.inputError,
+            ]}
             disabled={isSubmitting}
           />
           {errors.district && (
             <Text style={styles.errorText}>{errors.district}</Text>
           )}
 
-          <TextInput
-            placeholder="Full Address"
-            placeholderTextColor={PLACEHOLDER_COLOR}
-            value={formData.address}
-            onChangeText={(val) => handleInputChange("address", val)}
-            style={[styles.input, errors.address && styles.inputError]}
-            editable={!isSubmitting}
-          />
+          <Text style={styles.fieldLabel}>Full address</Text>
+          <View
+            style={[
+              styles.inputShell,
+              styles.addressInputShell,
+              errors.address && styles.inputError,
+            ]}
+          >
+            <Ionicons
+              name="home-outline"
+              size={18}
+              color="#64748b"
+              style={styles.addressIcon}
+            />
+            <TextInput
+              placeholder="House, road, area and nearby landmark"
+              placeholderTextColor={PLACEHOLDER_COLOR}
+              value={formData.address}
+              onChangeText={(val) => handleInputChange("address", val)}
+              style={[styles.premiumInput, styles.addressInput]}
+              editable={!isSubmitting}
+              multiline
+              numberOfLines={2}
+              textAlignVertical="top"
+              blurOnSubmit={false}
+              autoComplete="street-address"
+            />
+          </View>
           {errors.address && (
             <Text style={styles.errorText}>{errors.address}</Text>
           )}
@@ -460,7 +530,9 @@ const CheckoutPage = () => {
               <TouchableOpacity
                 style={[
                   styles.optionCard,
-                  deliveryOption === "FREE" && styles.optionCardActive,
+                  deliveryOption === "FREE" &&
+                    !freeDisabled &&
+                    styles.optionCardActive,
                   (isSubmitting || freeDisabled) && styles.disabledCard,
                 ]}
                 onPress={() => {
@@ -469,15 +541,24 @@ const CheckoutPage = () => {
                 }}
                 disabled={isSubmitting || freeDisabled}
               >
-                <View style={styles.radioDotWrap}>
+                <View
+                  style={[
+                    styles.radioDotWrap,
+                    deliveryOption === "FREE" &&
+                      !freeDisabled &&
+                      styles.radioDotWrapActive,
+                  ]}
+                >
                   <View
                     style={[
                       styles.radioDot,
-                      deliveryOption === "FREE" && styles.radioDotActive,
+                      deliveryOption === "FREE" &&
+                        !freeDisabled &&
+                        styles.radioDotActive,
                     ]}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.optionContent}>
                   <Text style={styles.optionTitle}>{freeTitleByArea()}</Text>
                   <Text style={styles.optionSub}>
                     Premium users get free delivery after minimum order
@@ -491,15 +572,22 @@ const CheckoutPage = () => {
                     </Text>
                   )}
                 </View>
-                <Text style={styles.optionPrice}>{freeCardPriceLabel}</Text>
-
-                {/* small lock badge when locked */}
-                {freeDisabled && (
-                  <View style={styles.lockBadge}>
-                    <Ionicons name="lock-closed" size={12} color="#555" />
-                    <Text style={styles.lockBadgeText}>Locked</Text>
-                  </View>
-                )}
+                <View style={styles.optionMeta}>
+                  {freeDisabled && (
+                    <View style={styles.lockBadge}>
+                      <Ionicons name="lock-closed" size={11} color="#64748b" />
+                      <Text style={styles.lockBadgeText}>Locked</Text>
+                    </View>
+                  )}
+                  <Text
+                    style={[
+                      styles.optionPrice,
+                      !freeDisabled && styles.freeOptionPrice,
+                    ]}
+                  >
+                    {freeCardPriceLabel}
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
 
@@ -517,11 +605,16 @@ const CheckoutPage = () => {
                 }}
                 disabled={isSubmitting}
               >
-                <View style={styles.radioDotWrap}>
+                <View
+                  style={[
+                    styles.radioDotWrap,
+                    deliveryOption === "NAR70" && styles.radioDotWrapActive,
+                  ]}
+                >
                   <View
                     style={[
                       styles.radioDot,
-                      deliveryOption === "NAR120" && styles.radioDotActive,
+                      deliveryOption === "NAR70" && styles.radioDotActive,
                     ]}
                   />
                 </View>
@@ -546,7 +639,12 @@ const CheckoutPage = () => {
                 }}
                 disabled={isSubmitting}
               >
-                <View style={styles.radioDotWrap}>
+                <View
+                  style={[
+                    styles.radioDotWrap,
+                    deliveryOption === "EXPRESS" && styles.radioDotWrapActive,
+                  ]}
+                >
                   <View
                     style={[
                       styles.radioDot,
@@ -576,7 +674,12 @@ const CheckoutPage = () => {
                 }}
                 disabled={isSubmitting}
               >
-                <View style={styles.radioDotWrap}>
+                <View
+                  style={[
+                    styles.radioDotWrap,
+                    deliveryOption === "STD" && styles.radioDotWrapActive,
+                  ]}
+                >
                   <View
                     style={[
                       styles.radioDot,
@@ -596,39 +699,45 @@ const CheckoutPage = () => {
               </TouchableOpacity>
             )}
 
-            {/* ✅ Others Standard (৳130) */}
-            {formData.district === "Others" && (
-              <TouchableOpacity
-                style={[
-                  styles.optionCard,
-                  deliveryOption === "STD" && styles.optionCardActive,
-                  isSubmitting && styles.disabledCard,
-                ]}
-                onPress={() => {
-                  if (isSubmitting) return;
-                  setDeliveryOption("STD");
-                }}
-                disabled={isSubmitting}
-              >
-                <View style={styles.radioDotWrap}>
+            {/* ✅ All districts outside Dhaka/Narayanganj use standard ৳130 */}
+            {formData.district !== "Dhaka" &&
+              formData.district !== "Narayanganj" && (
+                <TouchableOpacity
+                  style={[
+                    styles.optionCard,
+                    deliveryOption === "STD" && styles.optionCardActive,
+                    isSubmitting && styles.disabledCard,
+                  ]}
+                  onPress={() => {
+                    if (isSubmitting) return;
+                    setDeliveryOption("STD");
+                  }}
+                  disabled={isSubmitting}
+                >
                   <View
                     style={[
-                      styles.radioDot,
-                      deliveryOption === "STD" && styles.radioDotActive,
+                      styles.radioDotWrap,
+                      deliveryOption === "STD" && styles.radioDotWrapActive,
                     ]}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optionTitle}>Standard Delivery</Text>
-                  <Text style={styles.optionSub}>
-                    Delivery time within 1–3 days
+                  >
+                    <View
+                      style={[
+                        styles.radioDot,
+                        deliveryOption === "STD" && styles.radioDotActive,
+                      ]}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.optionTitle}>Standard Delivery</Text>
+                    <Text style={styles.optionSub}>
+                      Delivery to {formData.district} within 1–3 days
+                    </Text>
+                  </View>
+                  <Text style={styles.optionPrice}>
+                    ৳{districtCharge(formData.district)}
                   </Text>
-                </View>
-                <Text style={styles.optionPrice}>
-                  ৳{districtCharge("Others")}
-                </Text>
-              </TouchableOpacity>
-            )}
+                </TouchableOpacity>
+              )}
           </View>
         )}
 
@@ -775,7 +884,7 @@ const CheckoutPage = () => {
       </ScrollView>
 
       {/* Bottom fixed submit button */}
-      <View style={{ position: "absolute", left: 14, right: 14, bottom: 8 }}>
+      <View style={{ position: "absolute", left: 14, right: 14, bottom: 20 }}>
         <TouchableOpacity
           style={[styles.orderBtn]}
           onPress={handleSubmitOrder}
@@ -798,6 +907,19 @@ const CheckoutPage = () => {
           )}
         </TouchableOpacity>
       </View>
+
+      <GuidedCoachmark
+        enabled={
+          selectedItems.length > 0 && !isSubmitting && showPurchaseGuidance
+        }
+        message="সব তথ্য ঠিক থাকলে এখানে চাপ দিয়ে অর্ডারটি সম্পূর্ণ করুন।"
+        bottom={72}
+        right={14}
+        width={284}
+        targetWidth={330}
+        targetRight={-14}
+        delay={800}
+      />
 
       <SuccessModal
         visible={isModalVisible}
@@ -834,12 +956,100 @@ const styles = StyleSheet.create({
   productScroll: { flexDirection: "row", marginBottom: 16, marginTop: 15 },
 
   shippingSection: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    borderColor: "#dbe5f0",
+    borderRadius: 18,
     padding: 16,
     marginBottom: 20,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  shippingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 14,
+    marginBottom: 15,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
+  },
+  shippingHeaderIcon: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    backgroundColor: "#eff6ff",
+    marginRight: 10,
+  },
+  shippingTitle: { color: "#0f172a", fontSize: 17, fontWeight: "700" },
+  shippingSubtitle: { color: "#64748b", fontSize: 11.5, marginTop: 2 },
+  secureBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "#ecfdf5",
+  },
+  secureBadgeText: { color: "#047857", fontSize: 10, fontWeight: "700" },
+  fieldLabel: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 7,
+    marginLeft: 2,
+  },
+  inputShell: {
+    minHeight: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 13,
+    marginBottom: 13,
+    borderWidth: 1,
+    borderColor: "#d8e0ea",
+    borderRadius: 13,
+    backgroundColor: "#f8fafc",
+  },
+  premiumInput: {
+    flex: 1,
+    color: "#0f172a",
+    fontSize: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  phonePrefix: { flexDirection: "row", alignItems: "center", gap: 4 },
+  flagText: { fontSize: 17 },
+  phonePrefixText: { color: "#334155", fontSize: 13, fontWeight: "700" },
+  inputDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 24,
+    backgroundColor: "#cbd5e1",
+    marginLeft: 9,
+  },
+  phoneCount: { color: "#94a3b8", fontSize: 10.5 },
+  premiumDropdown: {
+    minHeight: 50,
+    marginBottom: 13,
+    borderColor: "#d8e0ea",
+    borderRadius: 13,
+    backgroundColor: "#f8fafc",
+  },
+  addressInputShell: {
+    minHeight: 82,
+    alignItems: "flex-start",
+    paddingTop: 3,
+  },
+  addressIcon: { marginTop: 14 },
+  addressInput: {
+    minHeight: 74,
+    lineHeight: 20,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
@@ -898,7 +1108,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   optionCardActive: {
-    borderColor: "#0ea5e9",
+    borderColor: "#2563eb",
+    backgroundColor: "#f8fbff",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 1,
   },
   disabledCard: {
     opacity: 0.6,
@@ -913,6 +1129,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 10,
   },
+  radioDotWrapActive: {
+    borderColor: "#1d4ed8",
+  },
   radioDot: {
     width: 10,
     height: 10,
@@ -920,11 +1139,19 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   radioDotActive: {
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#1d4ed8",
   },
+  optionContent: { flex: 1, paddingRight: 8 },
+  optionMeta: { alignItems: "flex-end", alignSelf: "stretch" },
   optionTitle: { fontSize: 15, fontWeight: "600", color: "#222" },
   optionSub: { fontSize: 12, color: "#666", marginTop: 2 },
-  optionPrice: { fontSize: 14, fontWeight: "600", color: "#222" },
+  optionPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#222",
+    marginTop: "auto",
+  },
+  freeOptionPrice: { color: "#047857" },
 
   couponSection: {
     flexDirection: "row",
@@ -953,7 +1180,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderColor: "#eee",
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 100,
   },
   summaryRow: {
     flexDirection: "row",
@@ -991,21 +1218,20 @@ const styles = StyleSheet.create({
     color: "#b45309",
   },
   lockBadge: {
-    position: "absolute",
-    top: 8,
-    right: 10,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#f5f5f5",
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    marginBottom: 7,
   },
   lockBadgeText: {
-    fontSize: 11,
-    color: "#555",
+    fontSize: 10,
+    color: "#64748b",
+    fontWeight: "600",
   },
 });
