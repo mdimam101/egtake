@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   ScrollView,
@@ -14,50 +15,70 @@ import { trackBasic } from "../helper/trackBasic";
 
 // ✅ NEW: global navigation helper (no useNavigation hook)
 import { navigate } from "../common/navigationRef";
+import useCategoryProducts from "../helper/useCategoryProducts";
+import useProductCards from "../hooks/useProductCards";
 
 const screenWidth = Dimensions.get("window").width;
 
 const CategoryPage = () => {
-  const [allProducts, setAllProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const getProductFromStore = useSelector(
-    (state) => state.productState.productList,
-  );
+  const isAllCategories = selectedCategory === "All";
 
   const [supportOpen, setSupportOpen] = useState(false);
 
   const categoryList = useSelector((state) => state.categoryState.categoryList);
+  const {
+    products: directoryProducts,
+    loading: directoryLoading,
+    loadingMore: directoryLoadingMore,
+    error: directoryError,
+    pagination: directoryPagination,
+    loadMore: loadMoreCategories,
+    retry: retryCategories,
+  } = useProductCards({ enabled: isAllCategories, updateStore: false });
+  const {
+    products: categoryProducts,
+    loading: categoryLoading,
+    error: categoryError,
+    refetch: refetchCategory,
+  } = useCategoryProducts(isAllCategories ? null : selectedCategory);
 
-  useEffect(() => {
-    setAllProducts(getProductFromStore);
-  }, [getProductFromStore]);
-
-  // 🔵 Filtering logic (same as web)
-  let filteredCategories = [];
-
-  if (selectedCategory === "All") {
-    const subCategories = allProducts
-      .map((item) => item.subCategory)
-      .filter((item) => item !== "");
-    const uniqueSub = [...new Set(subCategories)];
-    filteredCategories = uniqueSub.map((subCat) =>
-      allProducts.find((p) => p.subCategory === subCat),
-    );
-  } else {
-    const filteredProducts = allProducts.filter(
-      (item) => item.category === selectedCategory,
-    );
-    const subCategories = filteredProducts
-      .map((item) => item.subCategory)
-      .filter((item) => item !== "");
-    const uniqueSub = [...new Set(subCategories)];
-    filteredCategories = uniqueSub.map((subCat) =>
-      allProducts.find((p) => p.subCategory === subCat),
-    );
-  }
+  const displayedProducts = isAllCategories
+    ? directoryProducts
+    : categoryProducts;
+  const filteredCategories = useMemo(() => {
+    const seen = new Set();
+    return displayedProducts.filter((product) => {
+      const name = product?.subCategory;
+      if (typeof name !== "string" || !name.trim() || seen.has(name)) {
+        return false;
+      }
+      seen.add(name);
+      return true;
+    });
+  }, [displayedProducts]);
 
   const handleCategoryPress = (categoryName) => {
     setSelectedCategory(categoryName);
+  };
+
+  const handleDirectoryScroll = ({ nativeEvent }) => {
+    if (
+      !isAllCategories ||
+      directoryLoading ||
+      directoryLoadingMore ||
+      directoryError ||
+      !directoryPagination.hasMore
+    ) {
+      return;
+    }
+    const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+    if (
+      contentOffset.y + layoutMeasurement.height >=
+      contentSize.height - 300
+    ) {
+      loadMoreCategories();
+    }
   };
 
   const handleSubCategory = (subcatName) => {
@@ -129,7 +150,15 @@ const CategoryPage = () => {
           contentContainerStyle={styles.gridWrapper}
           showsVerticalScrollIndicator={false}
           overScrollMode="never"
+          onScroll={handleDirectoryScroll}
+          scrollEventThrottle={100}
         >
+          {categoryLoading && <Text>Loading products...</Text>}
+          {categoryError && (
+            <TouchableOpacity onPress={refetchCategory}>
+              <Text>Unable to fetch products. Tap to retry.</Text>
+            </TouchableOpacity>
+          )}
           {filteredCategories.map((subcat, index) => (
             <TouchableOpacity
               key={index}
@@ -155,6 +184,31 @@ const CategoryPage = () => {
               </Text>
             </TouchableOpacity>
           ))}
+          {isAllCategories && (
+            <View style={styles.directoryFooter}>
+              {directoryLoading || directoryLoadingMore ? (
+                <ActivityIndicator
+                  color="#ff3f73"
+                  accessibilityLabel="Loading categories"
+                />
+              ) : directoryError ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading categories"
+                  onPress={retryCategories}
+                >
+                  <Text>Unable to fetch categories. Tap to retry.</Text>
+                </TouchableOpacity>
+              ) : directoryPagination.hasMore ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={loadMoreCategories}
+                >
+                  <Text>Load more categories</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -261,6 +315,12 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     paddingRight: 4,
     paddingBottom: 28,
+  },
+
+  directoryFooter: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 12,
   },
 
   card: {

@@ -50,6 +50,7 @@ const sortCartItemsNewestFirst = (items = []) => {
 };
 
 const RECOMMENDED_PAGE_SIZE = 24;
+const CART_DETAILS_CONCURRENCY = 4;
 
 // cache-first merge: cache আগে দেখাবে, তারপর server থেকে শুধু নতুন/updated গুলো যোগ করবে
 const mergeCartArrays = (cacheArr = [], serverArr = []) => {
@@ -125,23 +126,79 @@ const CartPage = () => {
   };
 
   // check latest product for quantity check
-  const fetchLatestProducts = async () => {
-    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
-    try {
-      const response = await axios.get(SummaryApi.get_product.url, {
-        headers: {
-          "x-client-key": clientKey,
-        },
-      });
-      if (response.data.success) {
-        setLatestProducts(response.data.data);
-      }
-    } catch {}
-  };
+  const cartProductIdsKey = useMemo(
+    () =>
+      JSON.stringify(
+        [
+          ...new Set(
+            cartItems
+              .map((item) =>
+                typeof item.productId === "object"
+                  ? item.productId?._id
+                  : item.productId,
+              )
+              .filter(Boolean),
+          ),
+        ].sort(),
+      ),
+    [cartItems],
+  );
+
+  // Stock checks need full variants, fetched only for products in the cart.
+  useEffect(() => {
+    const productIds = JSON.parse(cartProductIdsKey);
+    const controller = new AbortController();
+    let active = true;
+
+    setLatestProducts((previous) =>
+      previous.filter((product) => productIds.includes(product._id)),
+    );
+
+    const fetchCartProductDetails = async () => {
+      const products = [];
+      let nextIndex = 0;
+      const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
+
+      const fetchNextProduct = async () => {
+        while (active && nextIndex < productIds.length) {
+          const productId = productIds[nextIndex++];
+          try {
+            const response = await axios({
+              method: SummaryApi.product_details.method,
+              url: SummaryApi.product_details.url,
+              headers: {
+                "x-client-key": clientKey,
+                "Content-Type": "application/json",
+              },
+              data: { productId },
+              signal: controller.signal,
+            });
+            if (response.data?.success && response.data.data) {
+              products.push(response.data.data);
+            }
+          } catch {}
+        }
+      };
+
+      await Promise.all(
+        Array.from(
+          { length: Math.min(CART_DETAILS_CONCURRENCY, productIds.length) },
+          fetchNextProduct,
+        ),
+      );
+      if (active) setLatestProducts(products);
+    };
+
+    if (productIds.length > 0) fetchCartProductDetails();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [cartProductIdsKey]);
 
   useEffect(() => {
     fetchCartItems();
-    fetchLatestProducts();
   }, []);
 
   useEffect(() => {
@@ -319,7 +376,6 @@ const CartPage = () => {
     if (user?._id) {
       fetchCartItems();
     }
-    fetchLatestProducts();
   }, []);
 
   const allSelected =

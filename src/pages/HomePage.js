@@ -1,9 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   FlatList,
@@ -16,7 +15,6 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import ensureHttps from "../common/ensureHttps";
-import SummaryApi from "../common/SummaryApi";
 import BannerSlider from "../components/BannerSlider";
 import CategoryListBar from "../components/CategoryListBar";
 import SearchBar, { SupportSheet } from "../components/SearchBar";
@@ -25,14 +23,14 @@ import SkeletonSlideCard from "../components/SkeletonSlideCard";
 import UserProductCart from "../components/UserProductCart";
 import UserSlideProductCard from "../components/UserSlideProductCard";
 import { sortProductsByUserInterest } from "../helper/sortByUserInterest";
-import { generateOptimizedVariants } from "../helper/variantUtils";
-import { setAllProductList } from "../store/allProductSlice";
+import useCategoryProducts from "../helper/useCategoryProducts";
+import useProductCards from "../hooks/useProductCards";
+import useTrendingProducts from "../hooks/useTrendingProducts";
 import { setHandCraftList } from "../store/handCraftSlice";
 import { setSalesList } from "../store/salesSlice"; // ✅ KEEP: Sales slice
-import { setTrendingList } from "../store/trendingSlice";
 import { setUnder99List } from "../store/under99Slice";
 
-const PAGE_SIZE = 24;
+const RENDER_BATCH_SIZE = 24;
 
 // Home sliders show one representative card per product. The full category
 // views intentionally keep every optimized variant, just like the For You grid.
@@ -47,14 +45,39 @@ const uniqueProductsById = (products = []) => {
 
 // Home Page
 const HomePage = () => {
-  const [loading, setLoading] = useState(true);
+  const {
+    loading,
+    loadingMore,
+    error: productError,
+    pagination,
+    loadMore,
+    retry: retryProducts,
+  } = useProductCards({ cacheHome: true });
+  const {
+    loading: trendingLoading,
+    error: trendingError,
+    retry: retryTrending,
+  } = useTrendingProducts({ cacheHome: true });
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const isTrendingCategory = selectedCategory === "_trending";
+  const isRegularCategory = Boolean(
+    selectedCategory && !selectedCategory.startsWith("_"),
+  );
+  const {
+    products: categoryProducts,
+    loading: categoryLoading,
+    error: categoryError,
+    refetch: retryCategory,
+  } = useCategoryProducts(isRegularCategory ? selectedCategory : null);
   const [slideAnim] = useState(new Animated.Value(0));
   const [prevCategory, setPrevCategory] = useState(null);
-  const [sortedProducts, setSortedProducts] = useState([]);
+  const [interestSorted, setInterestSorted] = useState({
+    source: null,
+    products: [],
+  });
   const [pressedIds, setPressedIds] = useState({});
 
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [visibleCount, setVisibleCount] = useState(RENDER_BATCH_SIZE);
   const scrollRefforFlatList = useRef();
 
   const catListRef = useRef(null); // ✅ category FlatList ref
@@ -80,6 +103,10 @@ const HomePage = () => {
   const [showSalesSlide, setShowSalesSlide] = useState(false);
 
   const optimizedProducts = useSelector((s) => s.productState.productList);
+  const sortedProducts =
+    interestSorted.source === optimizedProducts
+      ? interestSorted.products
+      : optimizedProducts;
   const trendingFromStore = useSelector((s) => s.trendingState.trendingList);
   const under99FromStore = useSelector((s) => s.under99State.under99List);
   const handFromStore = useSelector((s) => s.handCraftState.handCraftList);
@@ -90,150 +117,31 @@ const HomePage = () => {
 
   const [supportOpen, setSupportOpen] = useState(false);
 
-  // ======= HELPERS: updatedAt compare (order-agnostic, O(n)) =======
-  const mapUpdatedAtById = (arr = []) => {
-    const m = new Map();
-    for (let i = 0; i < (arr?.length || 0); i++) {
-      const p = arr[i];
-      m.set(p._id, p?.updatedAt || p?.createdAt || 0);
-    }
-    return m;
-  };
-
-  const needUpdateByUpdatedAt = (oldArr, newArr) => {
-    if (!oldArr) return true;
-    if ((oldArr?.length || 0) !== (newArr?.length || 0)) return true;
-
-    const oldMap = mapUpdatedAtById(oldArr);
-    for (let i = 0; i < newArr.length; i++) {
-      const p = newArr[i];
-      const prevTs = oldMap.get(p._id);
-      const currTs = p?.updatedAt || p?.createdAt || 0;
-      if (!prevTs) return true; // নতুন আইটেম
-      if (prevTs !== currTs) return true; // কোনো পরিবর্তন হলে updatedAt বদলাবে
-    }
-    return false; // কিছু বদলায়নি
-  };
-
-  // ============== DATA FETCH (cache → API) ==============
-  const fetchAllProducts = async () => {
-    const clientKey = process.env.EXPO_PUBLIC_CLIENT_KEY;
-    setLoading(true);
-    try {
-      // 1) Cached → instant UI
-      const cachedStr = await AsyncStorage.getItem("productListCache");
-      let cachedParsed = null;
-      if (cachedStr) {
-        try {
-          cachedParsed = JSON.parse(cachedStr);
-          const optimized = generateOptimizedVariants(cachedParsed);
-          dispatch(setAllProductList(optimized));
-
-          // HandCraft (latest→oldest) + de-dup by _id
-          const handCraftSorted = optimized
-            .filter((p) => p.handCraft)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenH = new Set();
-          const handCraftUnique = [];
-          for (const it of handCraftSorted) {
-            if (seenH.has(it._id)) continue;
-            seenH.add(it._id);
-            handCraftUnique.push(it);
-          }
-          dispatch(setHandCraftList(handCraftUnique));
-
-          // Sales (latest→oldest), retaining every variant for View More
-          const salesSorted = optimized
-            .filter((p) => p.salesOn)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          dispatch(setSalesList(salesSorted));
-
-          // Trending (latest→oldest), retaining every variant for View More
-          const trendingSorted = optimized
-            .filter((p) => p.trandingProduct)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          dispatch(setTrendingList(trendingSorted));
-
-          // 0~199 (latest→oldest), retaining every variant for View More
-          const under99Sorted = optimized
-            .filter((p) => (p.selling ?? Infinity) <= 199)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          dispatch(setUnder99List(under99Sorted));
-        } catch {}
-      }
-
-      // 2) Fresh API (cache-buster + no-cache)
-      // const res = await axios.get(
-      //   `${SummaryApi.get_product.url}?_t=${Date.now()}`,
-      //   { headers: { "Cache-Control": "no-cache" } }
-      // );
-      const res = await axios.get(SummaryApi.get_product.url, {
-        headers: {
-          "x-client-key": clientKey,
-        },
-      });
-
-      if (res.data?.success) {
-        const newData = res.data.data || [];
-
-        const needUpdate = needUpdateByUpdatedAt(cachedParsed, newData);
-
-        if (needUpdate) {
-          await AsyncStorage.setItem(
-            "productListCache",
-            JSON.stringify(newData),
-          );
-
-          const optimized = generateOptimizedVariants(newData);
-          dispatch(setAllProductList(optimized));
-
-          //when needUpdate HandCraft  (latest→oldest) + de-dup by _id
-          const handCraftSorted = optimized
-            .filter((p) => p.handCraft)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          const seenH2 = new Set();
-          const handCraftUnique2 = [];
-          for (const it of handCraftSorted) {
-            if (seenH2.has(it._id)) continue;
-            seenH2.add(it._id);
-            handCraftUnique2.push(it);
-          }
-          dispatch(setHandCraftList(handCraftUnique2));
-
-          // Sales: keep all variants for the expanded grid
-          const salesSorted = optimized
-            .filter((p) => p.salesOn)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          dispatch(setSalesList(salesSorted));
-
-          // Trending: keep all variants for the expanded grid
-          const trendingSorted = optimized
-            .filter((p) => p.trandingProduct)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          dispatch(setTrendingList(trendingSorted));
-
-          // 0~199: keep all variants for the expanded grid
-          const under99Sorted = optimized
-            .filter((p) => (p.selling ?? Infinity) <= 199)
-            .sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-          dispatch(setUnder99List(under99Sorted));
-        }
-      }
-    } catch (err) {
-      // console.log("❌ Product fetch failed", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ============== RUN IT: সবসময়  ==============
   useEffect(() => {
-    if (optimizedProducts.length === 0) {
-      fetchAllProducts();
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    const newestFirst = (cards) =>
+      cards.sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+    dispatch(
+      setHandCraftList(
+        uniqueProductsById(
+          newestFirst(optimizedProducts.filter((product) => product.handCraft)),
+        ),
+      ),
+    );
+    dispatch(
+      setSalesList(
+        newestFirst(optimizedProducts.filter((product) => product.salesOn)),
+      ),
+    );
+    dispatch(
+      setUnder99List(
+        newestFirst(
+          optimizedProducts.filter(
+            (product) => (product.selling ?? Infinity) <= 199,
+          ),
+        ),
+      ),
+    );
+  }, [dispatch, optimizedProducts]);
 
   // ✅ KEEP: store hydrated → instantly show section
   useEffect(() => {
@@ -273,12 +181,16 @@ const HomePage = () => {
 
   // ============== SORT BY USER INTEREST (BACKGROUND) ==============
   useEffect(() => {
-    if (optimizedProducts.length > 0) {
-      const task = InteractionManager.runAfterInteractions(() =>
-        sortProductsByUserInterest(optimizedProducts).then(setSortedProducts),
-      );
-      return () => task.cancel?.();
-    }
+    let alive = true;
+    const task = InteractionManager.runAfterInteractions(() =>
+      sortProductsByUserInterest(optimizedProducts).then((products) => {
+        if (alive) setInterestSorted({ source: optimizedProducts, products });
+      }),
+    );
+    return () => {
+      alive = false;
+      task.cancel?.();
+    };
   }, [optimizedProducts]);
 
   // Trending 2-phase
@@ -387,11 +299,7 @@ const HomePage = () => {
           ? handFromStore
           : selectedCategory === "_sales"
             ? salesFromStore
-            : sortedProducts.filter(
-                (item) =>
-                  item.category?.toLowerCase() ===
-                  selectedCategory?.toLowerCase(),
-              )
+            : categoryProducts
     : sortedProducts;
 
   const totalLength = selectedCategory
@@ -412,17 +320,113 @@ const HomePage = () => {
     };
   }, [memoFiltered]);
 
-  // pagination guard + handler
+  // Reveal buffered cards first, then request only the next server page.
   const endLock = useRef(false);
-  const canLoadMore = visibleCount < totalLength;
-  const handleEndReached = useCallback(() => {
-    if (endLock.current || !canLoadMore) return;
-    endLock.current = true;
-    requestAnimationFrame(() => {
-      setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, totalLength));
-      endLock.current = false;
-    });
-  }, [canLoadMore, totalLength]);
+  const hasRemoteMore = Boolean(
+    !isRegularCategory &&
+    !isTrendingCategory &&
+    pagination.hasMore &&
+    pagination.nextPage,
+  );
+  const handleEndReached = useCallback(async () => {
+    // The complete trending response is already loaded; reveal local cards only.
+    if (isTrendingCategory) {
+      if (!trendingLoading && !trendingError && visibleCount < totalLength) {
+        setVisibleCount((count) =>
+          Math.min(count + RENDER_BATCH_SIZE, totalLength),
+        );
+      }
+      return;
+    }
+
+    if (
+      endLock.current ||
+      loading ||
+      loadingMore ||
+      categoryLoading ||
+      (isRegularCategory ? categoryError : productError)
+    )
+      return;
+
+    if (visibleCount < totalLength) {
+      endLock.current = true;
+      setVisibleCount((count) =>
+        Math.min(count + RENDER_BATCH_SIZE, totalLength),
+      );
+      requestAnimationFrame(() => {
+        endLock.current = false;
+      });
+    } else if (hasRemoteMore) {
+      endLock.current = true;
+      try {
+        if (await loadMore())
+          setVisibleCount((count) => count + RENDER_BATCH_SIZE);
+      } finally {
+        endLock.current = false;
+      }
+    }
+  }, [
+    categoryError,
+    categoryLoading,
+    hasRemoteMore,
+    isRegularCategory,
+    isTrendingCategory,
+    loadMore,
+    loading,
+    loadingMore,
+    productError,
+    totalLength,
+    trendingError,
+    trendingLoading,
+    visibleCount,
+  ]);
+
+  const loadError = isTrendingCategory
+    ? trendingError
+    : isRegularCategory
+      ? categoryError
+      : productError;
+  const renderRequestError = (requestError, retry) => (
+    <View style={{ padding: 15, alignItems: "center" }}>
+      <Text>
+        {typeof requestError === "string" ? requestError : requestError.message}
+      </Text>
+      <TouchableOpacity
+        onPress={retry}
+        style={{ padding: 12 }}
+        accessibilityRole="button"
+      >
+        <Text style={{ color: "#e91e63", fontWeight: "600" }}>Try again</Text>
+      </TouchableOpacity>
+    </View>
+  );
+  const renderListFooter = () => {
+    if (loadError) {
+      return renderRequestError(
+        loadError,
+        isTrendingCategory
+          ? retryTrending
+          : isRegularCategory
+            ? retryCategory
+            : retryProducts,
+      );
+    }
+    if (isTrendingCategory ? trendingLoading : loadingMore || categoryLoading) {
+      return <ActivityIndicator color="#e91e63" style={{ padding: 15 }} />;
+    }
+    if (!loading && hasRemoteMore && totalLength === 0) {
+      return (
+        <TouchableOpacity
+          onPress={handleEndReached}
+          accessibilityRole="button"
+          style={{ padding: 15, alignItems: "center" }}
+        >
+          <Text style={{ color: "#e91e63" }}>Load more products</Text>
+        </TouchableOpacity>
+      );
+    }
+    return <View style={{ height: 8 }} />;
+  };
 
   // ============== RENDERERS ==============
   const commonKeyExtractor = (item, index) =>
@@ -460,7 +464,7 @@ const HomePage = () => {
               ? "_below99"
               : null;
 
-    if (loading) {
+    if (slideName === "trending" ? trendingLoading : loading) {
       return (
         <View style={{ flexDirection: "row", paddingHorizontal: 10, gap: 4 }}>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -468,6 +472,10 @@ const HomePage = () => {
           ))}
         </View>
       );
+    }
+
+    if (slideName === "trending" && trendingError) {
+      return renderRequestError(trendingError, retryTrending);
     }
 
     if (!targetSlide || !selectCat) return null;
@@ -543,7 +551,7 @@ const HomePage = () => {
       });
     }
     scrollToTop();
-    setVisibleCount(PAGE_SIZE);
+    setVisibleCount(RENDER_BATCH_SIZE);
   }, [selectedCategory]);
 
   // ============== UI ==============
@@ -623,15 +631,7 @@ const HomePage = () => {
             )}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            ListFooterComponent={
-              canLoadMore ? (
-                <View style={{ paddingVertical: 15 }}>
-                  <Text style={{ textAlign: "center" }}>Loading more...</Text>
-                </View>
-              ) : (
-                <View style={{ height: 8 }} />
-              )
-            }
+            ListFooterComponent={renderListFooter()}
           />
         </Animated.View>
       ) : (
@@ -757,15 +757,7 @@ const HomePage = () => {
             )}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            ListFooterComponent={
-              canLoadMore ? (
-                <View style={{ paddingVertical: 15 }}>
-                  <Text style={{ textAlign: "center" }}>Loading more...</Text>
-                </View>
-              ) : (
-                <View style={{ height: 8 }} />
-              )
-            }
+            ListFooterComponent={renderListFooter()}
             ref={scrollRefforFlatList}
           />
         </Animated.View>

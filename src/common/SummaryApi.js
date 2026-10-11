@@ -24,6 +24,14 @@ const SummaryApi = {
     url: `${BASE_URL}/api/get-product`,
     method: "get",
   },
+  product_cards: {
+    url: `${BASE_URL}/api/product-cards`,
+    method: "get",
+  },
+  trending_product_cards: {
+    url: `${BASE_URL}/api/trending-product-cards`,
+    method: "get",
+  },
   category_product: {
     url: `${BASE_URL}/api/get-categoryProduct`,
     method: "get",

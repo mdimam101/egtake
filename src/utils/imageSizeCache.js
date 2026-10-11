@@ -13,7 +13,8 @@ const STORE_KEY = "imgHeights_v4";
 const MAX_ENTRIES = 2000; // soft cap
 
 // --- URL normalizers (protocol/query/hash insensitive) ---
-const ensureHttpsLocal = (u = "") => String(u).replace(/^http:\/\//i, "https://");
+const ensureHttpsLocal = (u = "") =>
+  String(u).replace(/^http:\/\//i, "https://");
 const normalizeKey = (u = "") =>
   ensureHttpsLocal(u)
     .toLowerCase()
@@ -22,8 +23,8 @@ const normalizeKey = (u = "") =>
     .split("?")[0]
     .split("#")[0];
 
-let mem = null;            // in-memory cache map
-let loadPromise = null;    // singleton loader
+let mem = null; // in-memory cache map
+let loadPromise = null; // singleton loader
 const inFlight = new Map(); // key -> Promise
 let saveTimer = null;
 
@@ -68,7 +69,7 @@ async function fetchRatio(url) {
     Image.getSize(
       url,
       (w, h) => resolve(h && w ? h / w : null),
-      () => resolve(null)
+      () => resolve(null),
     );
   });
 }
@@ -113,7 +114,7 @@ export async function getOrFetchRatio(url) {
         }
         inFlight.delete(key);
         return ratio;
-      })()
+      })(),
     );
   }
   return await inFlight.get(key);
@@ -137,7 +138,9 @@ export async function warm(urls = [], { concurrency = 6 } = {}) {
       if (typeof r === "number") ok++;
     }
   }
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, 8)) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.max(1, Math.min(concurrency, 8)) }, worker),
+  );
   return ok;
 }
 

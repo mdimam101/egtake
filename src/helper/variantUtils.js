@@ -1,5 +1,5 @@
 // helpers/variantUtils.js
-const getCreatedAt = (p = {}) => { 
+const getCreatedAt = (p = {}) => {
   if (p.createdAt) return new Date(p.createdAt);
   if (p._id && typeof p._id === "string" && p._id.length >= 8) {
     const ts = parseInt(p._id.substring(0, 8), 16);
@@ -30,10 +30,13 @@ export const generateOptimizedVariants = (products = []) => {
         variantSize: null,
         trandingProduct: !!item.trandingProduct,
         handCraft: !!item.handCraft,
-        salesOn:!!item.salesOn,
-        displaySalesSlied:!!item.displaySalesSlied,
+        salesOn: !!item.salesOn,
+        displaySalesSlied: !!item.displaySalesSlied,
+        totalStock: item.totalStock,
+        stock: item.totalStock,
+        trandingPriority: item.trandingPriority,
         createdTs: baseCreatedTs,
-        cardKey: `${item._id}::${(item?.img || item?.images?.[0] || "noimg")}`,
+        cardKey: `${item._id}::${item?.img || item?.images?.[0] || "noimg"}`,
       };
       grouped[item._id] = [v];
       if (maxLen < 1) maxLen = 1;
@@ -51,17 +54,28 @@ export const generateOptimizedVariants = (products = []) => {
         selling: item.selling,
         category: item.category,
         subCategory: item.subCategory,
-        img: vv?.images?.[0] || item?.img || item?.images?.[0] || null,
+        img:
+          vv?.firstImage ||
+          vv?.images?.[0] ||
+          item?.img ||
+          item?.images?.[0] ||
+          null,
+        variantId: vv?._id ?? null,
         variantColor: vv?.color ?? null,
         variantSize: vv?.size ?? null,
-        spcProductName:vv?.SpcProductName,
+        spcProductName: vv?.SpcProductName,
         spcSelling: vv?.SpcSelling,
         trandingProduct: !!item.trandingProduct,
         handCraft: !!item.handCraft,
-        salesOn:!!item.salesOn,
-        displaySalesSlied:!!item.displaySalesSlied,// TODO next time implement it
+        salesOn: !!item.salesOn,
+        displaySalesSlied: !!item.displaySalesSlied, // TODO next time implement it
+        totalStock: item.totalStock,
+        stock: vv?.stock,
+        trandingPriority: item.trandingPriority,
         createdTs: baseCreatedTs,
-        cardKey: `${item._id}::${(vv?.images?.[0] || item?.img || item?.images?.[0] || "noimg")}::${k}`,
+        cardKey: vv?._id
+          ? `${item._id}::${vv._id}`
+          : `${item._id}::${vv?.firstImage || vv?.images?.[0] || item?.img || item?.images?.[0] || "noimg"}::${k}`,
       };
     }
     grouped[item._id] = bucket;
@@ -79,4 +93,3 @@ export const generateOptimizedVariants = (products = []) => {
 
   return result;
 };
-
