@@ -52,7 +52,7 @@ const HomePage = () => {
     pagination,
     loadMore,
     retry: retryProducts,
-  } = useProductCards({ cacheHome: true });
+  } = useProductCards({ cacheHome: true, prefetchNextPage: true });
   const {
     loading: trendingLoading,
     error: trendingError,

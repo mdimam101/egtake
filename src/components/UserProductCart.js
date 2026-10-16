@@ -1,18 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import { Image as ExpoImage } from "expo-image";
-import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useCallback, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ensureHttps from "../common/ensureHttps"; // ← path adjust if needed
-import * as ImageSizeCache from "../utils/imageSizeCache"; // ← path adjust if needed
 
-const DEFAULT_RATIO = 1.2;
+const DEFAULT_ASPECT_RATIO = 1 / 1.2;
 
 function UserProductCart({
   productData,
@@ -21,53 +13,38 @@ function UserProductCart({
   pressGuard,
 }) {
   const navigation = useNavigation();
-  const screenWidth = Dimensions.get("window").width;
-  const cardWidth = React.useMemo(() => screenWidth * 0.49, [screenWidth]);
 
   const rawImageUrl =
     productData?.img || productData?.variants?.[0]?.images?.[0] || null;
   const imageUrl = React.useMemo(() => ensureHttps(rawImageUrl), [rawImageUrl]);
 
-  // height resolve না হওয়া পর্যন্ত null, resolve হলে পিক্সেল height
-  const [resolvedHeight, setResolvedHeight] = useState(null);
-  const [resolving, setResolving] = useState(true);
+  const preparedAspectRatio = Number(productData?.imageAspectRatio);
+  const validPreparedAspectRatio =
+    Number.isFinite(preparedAspectRatio) && preparedAspectRatio > 0
+      ? preparedAspectRatio
+      : null;
+  const [ratioState, setRatioState] = useState({
+    url: null,
+    value: null,
+  });
+  const loadedAspectRatio =
+    ratioState.url === imageUrl ? ratioState.value : null;
+  const imageAspectRatio =
+    loadedAspectRatio || validPreparedAspectRatio || DEFAULT_ASPECT_RATIO;
 
-  // ratio resolve: cache পেলেই সাথে সাথে, না পেলে wait → তারপর দেখাও
-  useEffect(() => {
-    let alive = true;
-    setResolving(true);
-    setResolvedHeight(null);
+  const handleImageLoad = useCallback(
+    (event) => {
+      const width = Number(event?.source?.width);
+      const height = Number(event?.source?.height);
+      if (!imageUrl || width <= 0 || height <= 0) return;
 
-    (async () => {
-      if (!imageUrl) {
-        if (!alive) return;
-        setResolvedHeight(cardWidth * DEFAULT_RATIO);
-        setResolving(false);
-        return;
-      }
+      const ratio = width / height;
+      if (!Number.isFinite(ratio) || ratio <= 0) return;
 
-      const cached = await ImageSizeCache.getCachedRatio(imageUrl);
-      if (!alive) return;
-
-      if (typeof cached === "number") {
-        setResolvedHeight(cardWidth * cached);
-        setResolving(false);
-        return; // ✅ cached থাকলে এখানেই থামো
-      }
-
-      const fresh = await ImageSizeCache.getOrFetchRatio(imageUrl);
-      if (!alive) return;
-
-      setResolvedHeight(
-        cardWidth * (typeof fresh === "number" ? fresh : DEFAULT_RATIO),
-      );
-      setResolving(false);
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [imageUrl, cardWidth]);
+      setRatioState({ url: imageUrl, value: ratio });
+    },
+    [imageUrl],
+  );
 
   const handlePress = () => {
     if (disabled) return;
@@ -94,36 +71,18 @@ function UserProductCart({
       accessibilityLabel={productData?.productName || "Product"}
       accessibilityState={{ disabled }}
     >
-      {resolving ? (
-        <View
-          style={{
-            width: "100%",
-            height: cardWidth * DEFAULT_RATIO,
-            borderRadius: 8,
-            overflow: "hidden",
-            backgroundColor: "#f2f2f2",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <ActivityIndicator size="small" />
-        </View>
-      ) : (
-        <ExpoImage
-          source={imageUrl ? { uri: imageUrl } : undefined}
-          style={{
-            width: "100%",
-            height: resolvedHeight ?? cardWidth * DEFAULT_RATIO,
-            // contentFit: "cover",
-            borderRadius: 8,
-          }}
-          contentFit="cover"
-          cachePolicy="disk"
-          allowDownscaling
-          recycleMemory
-          onError={() => setResolvedHeight(cardWidth * DEFAULT_RATIO)}
-        />
-      )}
+      <ExpoImage
+        source={imageUrl ? { uri: imageUrl } : undefined}
+        style={[styles.image, { aspectRatio: imageAspectRatio }]}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        priority="high"
+        transition={0}
+        allowDownscaling
+        recycleMemory
+        recyclingKey={productData?.cardKey || productData?._id || imageUrl}
+        onLoad={handleImageLoad}
+      />
       <View style={styles.info}>
         <Text numberOfLines={2} style={styles.name}>
           {productName}
@@ -145,6 +104,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     margin: 0,
     paddingBottom: 8,
+  },
+  image: {
+    width: "100%",
+    borderRadius: 8,
+    backgroundColor: "#f2f2f2",
   },
   info: {
     marginTop: 8,

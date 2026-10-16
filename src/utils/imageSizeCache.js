@@ -87,6 +87,24 @@ export async function getCachedRatio(url) {
 }
 
 /**
+ * Store a ratio discovered by the image component's own load event. This avoids
+ * a separate Image.getSize request before the image can be rendered.
+ */
+export async function setCachedRatio(url, ratio) {
+  const value = Number(ratio);
+  if (!url || !Number.isFinite(value) || value <= 0) return false;
+
+  await ensureLoaded();
+  const key = normalizeKey(url);
+  if (mem[key]?.r === value) return true;
+
+  mem[key] = { r: value, t: Date.now() };
+  pruneIfNeeded();
+  scheduleSave();
+  return true;
+}
+
+/**
  * Return ratio; fetch-and-store only if missing.
  * No revalidation for existing entries.
  */
