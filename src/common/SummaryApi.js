@@ -1,4 +1,4 @@
-const BASE_URL = "https://api.pyzara.com";
+const BASE_URL = "https://api.pyzara.com"; // "https://api.pyzara.com"; //"http://192.168.3.6:8080";
 const SummaryApi = {
   signUp: {
     url: `${BASE_URL}/api/signup`,

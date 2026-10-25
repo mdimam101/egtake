@@ -1,20 +1,31 @@
 // components/SuccessModal.js
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from 'react-native-modal';
+
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const SuccessModal = ({ visible, onClose }) => {
   return (
-    <Modal isVisible={visible}>
-      <View style={styles.container}>
-        <View style={styles.circle}>
-          <Text style={styles.check}>✔</Text>
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <View style={styles.circle}>
+            <Text style={styles.check}>✔</Text>
+          </View>
+
+          <Text style={styles.title}>Thank You!</Text>
+
+          <Text style={styles.message}>
+            Your order has been placed successfully.
+          </Text>
+
+          <TouchableOpacity onPress={onClose} style={styles.okBtn}>
+            <Text style={styles.okText}>OK</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.title}>Thank You!</Text>
-        <Text style={styles.message}>Your order has been placed successfully.</Text>
-        <Text style={styles.message}>Please check order details in your profile page.</Text>
-        <TouchableOpacity onPress={onClose} style={styles.okBtn}>
-          <Text style={{ color: '#fff' }}>OK</Text>
-        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -23,41 +34,60 @@ const SuccessModal = ({ visible, onClose }) => {
 export default SuccessModal;
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
   container: {
-    backgroundColor: '#fff',
+    width: "100%",
+    maxWidth: 350,
+    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 30,
-    alignItems: 'center',
+    alignItems: "center",
   },
+
   circle: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     width: 80,
     height: 80,
     borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
+
   check: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 36,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
+
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
   },
+
   message: {
     fontSize: 14,
-    color: '#444',
-    textAlign: 'center',
+    color: "#444",
+    textAlign: "center",
     marginBottom: 20,
   },
+
   okBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 30,
     paddingVertical: 10,
     borderRadius: 6,
+  },
+
+  okText: {
+    color: "#fff",
   },
 });

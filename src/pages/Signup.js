@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-// import {
-//   GoogleSignin,
-//   statusCodes,
-// } from "@react-native-google-signin/google-signin";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,7 +20,7 @@ import {
 import Toast from "react-native-toast-message";
 import SummaryApi from "../common/SummaryApi";
 import Context from "../context";
-import { ensureDeviceId, getDeviceId } from "../utils/deviceId";
+import { ensureDeviceId } from "../utils/deviceId";
 
 const SignupPage = () => {
   const navigation = useNavigation();
@@ -34,84 +34,89 @@ const SignupPage = () => {
     "718012493910-ktti7v3cq77u5qi6so6dvjs3hup22a3t.apps.googleusercontent.com";
 
   useEffect(() => {
-    // GoogleSignin.configure({
-    //   webClientId,
-    //   offlineAccess: false,
-    // });
+    GoogleSignin.configure({
+      webClientId,
+      offlineAccess: false,
+    });
   }, []);
 
-  // const handleGoogleLogin = async () => {
-  //   try {
-  //     setIsGoogleSubmitting(true);
-  //     // Check Google Play Services availability
-  //     await GoogleSignin.hasPlayServices({
-  //       showPlayServicesUpdateDialog: true,
-  //     });
-  //     // Open native Google Sign-In UI
-  //     const userInfo = await GoogleSignin.signIn();
-  //     // Depending on library version, idToken can be in userInfo.data.idToken or userInfo.idToken
-  //     const credential = userInfo?.data?.idToken || userInfo?.idToken;
-  //     if (!credential) {
-  //       Toast.show({
-  //         type: "error",
-  //         text1: "Google ID token not found",
-  //       });
-  //       return;
-  //     }
-  //     const apiResponse = await axios({
-  //       method: SummaryApi.google_login.method,
-  //       url: SummaryApi.google_login.url,
-  //       headers: { "Content-Type": "application/json" },
-  //       withCredentials: true,
-  //       data: { credential },
-  //     });
-  //     if (apiResponse?.data?.success) {
-  //       Toast.show({
-  //         type: "success",
-  //         text1: "Google login successful",
-  //       });
-  //       await fetchUserDetails?.();
-  //       navigation.navigate("Home");
-  //     } else {
-  //       Toast.show({
-  //         type: "error",
-  //         text1: apiResponse?.data?.message || "Google login failed",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
-  //       Toast.show({
-  //         type: "info",
-  //         text1: "Google login cancelled",
-  //       });
-  //       return;
-  //     }
-  //     if (error?.code === statusCodes.IN_PROGRESS) {
-  //       Toast.show({
-  //         type: "info",
-  //         text1: "Google login already in progress",
-  //       });
-  //       return;
-  //     }
-  //     if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-  //       Toast.show({
-  //         type: "error",
-  //         text1: "Google Play Services not available",
-  //       });
-  //       return;
-  //     }
-  //     console.log("Google login error:", error);
-  //     Toast.show({
-  //       type: "error",
-  //       text1:
-  //         error?.response?.data?.message ||
-  //         error?.message ||
-  //         "Google login failed",
-  //     });
-  //   } finally {
-  //     setIsGoogleSubmitting(false);
-  //   }
-  // };
+  const handleGoogleLogin = async () => {
+    const deviceId = await ensureDeviceId();
+    try {
+      setIsGoogleSubmitting(true);
+      // Check Google Play Services availability
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      // Open native Google Sign-In UI
+      const userInfo = await GoogleSignin.signIn();
+      // Depending on library version, idToken can be in userInfo.data.idToken or userInfo.idToken
+      const credential = userInfo?.data?.idToken || userInfo?.idToken;
+      if (!credential) {
+        Toast.show({
+          type: "error",
+          text1: "Google ID token not found",
+        });
+        return;
+      }
+      const apiResponse = await axios({
+        method: SummaryApi.google_login.method,
+        url: SummaryApi.google_login.url,
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+        data: {
+          credential,
+          deviceId,
+          clientPlatform: Platform.OS,
+        },
+      });
+      if (apiResponse?.data?.success) {
+        Toast.show({
+          type: "success",
+          text1: "Google login successful",
+        });
+        await fetchUserDetails?.();
+        navigation.navigate("Home");
+      } else {
+        Toast.show({
+          type: "error",
+          text1: apiResponse?.data?.message || "Google login failed",
+        });
+      }
+    } catch (error) {
+      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+        Toast.show({
+          type: "info",
+          text1: "Google login cancelled",
+        });
+        return;
+      }
+      if (error?.code === statusCodes.IN_PROGRESS) {
+        Toast.show({
+          type: "info",
+          text1: "Google login already in progress",
+        });
+        return;
+      }
+      if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Toast.show({
+          type: "error",
+          text1: "Google Play Services not available",
+        });
+        return;
+      }
+      console.log("Google login error:", error);
+      Toast.show({
+        type: "error",
+        text1:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Google login failed",
+      });
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
+  };
 
   // Ensure deviceId exists when screen mounts
   useEffect(() => {
@@ -127,7 +132,7 @@ const SignupPage = () => {
       setIsGuestSubmitting(true);
 
       // Ensure deviceId (should already be there from useEffect/App bootstrap)
-      const deviceId = (await getDeviceId()) || (await ensureDeviceId());
+      const deviceId = await ensureDeviceId();
       if (!deviceId) {
         Toast.show({ type: "error", text1: "Failed to get device id" });
         return;
@@ -270,7 +275,7 @@ const SignupPage = () => {
               styles.googleBtn,
               (!webClientId || isGoogleSubmitting) && { opacity: 0.6 },
             ]}
-            // onPress={handleGoogleLogin}
+            onPress={handleGoogleLogin}
             disabled={!webClientId || isGoogleSubmitting || isGuestSubmitting}
             activeOpacity={0.8}
           >

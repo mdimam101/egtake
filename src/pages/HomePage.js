@@ -6,7 +6,7 @@ import {
   Animated,
   Easing,
   FlatList,
-  InteractionManager,
+  // InteractionManager,
   Image as RNImage,
   StyleSheet,
   Text,
@@ -170,7 +170,7 @@ const HomePage = () => {
     await serialPrefetch(imgs);
 
     // rest background
-    InteractionManager.runAfterInteractions(() => {
+    requestIdleCallback(() => {
       const rest = products
         .slice(take, 30)
         .map((p) => ensureHttps(p?.img))
@@ -182,7 +182,7 @@ const HomePage = () => {
   // ============== SORT BY USER INTEREST (BACKGROUND) ==============
   useEffect(() => {
     let alive = true;
-    const task = InteractionManager.runAfterInteractions(() =>
+    const task = requestIdleCallback(() =>
       sortProductsByUserInterest(optimizedProducts).then((products) => {
         if (alive) setInterestSorted({ source: optimizedProducts, products });
       }),

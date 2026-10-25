@@ -1,7 +1,14 @@
 // utils/trackBasic.js
-
+import SummaryApi from "../common/SummaryApi";
 export async function trackBasic(type, extra = {}) {
-  return null;
+  // return null;
+  try {
+    await fetch(SummaryApi.track_basic.url, {
+      method: SummaryApi.track_basic.method.toUpperCase(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, ...extra }),
+    });
+  } catch {}
 }
 
 // EXACT usage

@@ -80,6 +80,33 @@ const { width: screenWidth } = Dimensions.get("window");
 const getPrimaryImage = (item) =>
   ensureHttps(item?.img || item?.variants?.[0]?.images?.[0] || "");
 
+// Product Description Image - Auto Height
+const ProductDescriptionImage = ({ uri }) => {
+  const [aspectRatio, setAspectRatio] = useState(1);
+
+  return (
+    <View style={styles.productDescriptionImageWrap}>
+      <ExpoImage
+        source={{ uri }}
+        style={{
+          width: "100%",
+          aspectRatio: aspectRatio,
+        }}
+        contentFit="contain"
+        cachePolicy="disk"
+        allowDownscaling
+        recycleMemory
+        accessibilityLabel="Product description image"
+        onLoad={({ source }) => {
+          if (source?.width > 0 && source?.height > 0) {
+            setAspectRatio(source.width / source.height);
+          }
+        }}
+      />
+    </View>
+  );
+};
+
 // productDetailsPage
 const ProductDetails = ({ route }) => {
   const { id } = route.params;
@@ -100,6 +127,7 @@ const ProductDetails = ({ route }) => {
     subCategory: "",
     variants: [],
     description: "",
+    describedImgUrl: "", // ✅ NEW
     price: 0,
     selling: 0,
     sold: 0,
@@ -619,7 +647,7 @@ const ProductDetails = ({ route }) => {
     Math.floor(thumbnailAreaWidth / (THUMBNAIL_SIZE + THUMBNAIL_GAP)),
   );
   const shouldGridVariants = data.variants?.length > thumbnailCapacity;
-
+/*/
   useEffect(() => {
     if (
       !Array.isArray(recommendedProducts) ||
@@ -636,7 +664,7 @@ const ProductDetails = ({ route }) => {
     const id = setTimeout(() => setRecoAll(recommendedProducts), 0); // home-এর মতো "hobohobo"
     return () => clearTimeout(id);
   }, [recommendedProducts]);
-
+c*/
   const handleRecoPressReplace = useCallback(
     (item) => {
       const params = {
@@ -671,14 +699,18 @@ const ProductDetails = ({ route }) => {
     [navigation, getPrimaryImage],
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
-    // দ্রুত GC ট্রিগার—পুরনো বড় অ্যারে ফাঁকা করুন
+    // Reset previous product data when product ID changes
     setAllImages([]);
     setImageVariantMap([]);
     setSelectedImg(null);
     setReviews([]);
     setCurrentIndex(0);
   }, [id]);
+
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const recoSplit = useMemo(() => {
     if (!Array.isArray(recoDisplay)) return { left: [], right: [] };
@@ -727,7 +759,6 @@ const ProductDetails = ({ route }) => {
 
   // Controller উদাহরণ
   const desc = normalizeNewlinesServer(data?.description);
-  data.description = desc;
 
   // const productQA = [
   //   {
@@ -1583,6 +1614,15 @@ const ProductDetails = ({ route }) => {
           Code number : {data?.productCodeNumber}
         </Text>
 
+        {/* ✅ Product Description Image */}
+        {typeof data?.describedImgUrl === "string" &&
+          data.describedImgUrl.trim().length > 0 && (
+            <ProductDescriptionImage
+              key={data.describedImgUrl.trim()}
+              uri={ensureHttps(data.describedImgUrl.trim())}
+            />
+          )}
+
         {data?.productVideo?.url && data?.productVideo?.thumbnail && (
           <ProductVideoSection productVideo={data.productVideo} />
         )}
@@ -1601,7 +1641,7 @@ const ProductDetails = ({ route }) => {
                 ellipsizeMode="tail"
                 style={[{ lineHeight: 20, color: "#222" }, styles?.descText]}
               >
-                {data.description}
+                {desc}
               </Text>
 
               {/* Soft fade at bottom only if truncated */}
@@ -2098,6 +2138,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+
+  productDescriptionImageWrap: {
+    marginTop: 12,
+    marginHorizontal: 12,
+    backgroundColor: "#fff",
+    overflow: "hidden",
   },
 
   // skin care style

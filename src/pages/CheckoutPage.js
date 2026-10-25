@@ -6,6 +6,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +17,7 @@ import {
 import Toast from "react-native-toast-message";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import SummaryApi from "../common/SummaryApi";
 import CheckoutItemCard from "../components/CheckoutItemCard";
 import CustomDropdown from "../components/CustomDropdown"; // keep your existing component
@@ -25,9 +26,12 @@ import SuccessModal from "../components/SuccessModal";
 import Context from "../context";
 import deleteCartItemWhenOrderplace from "../helper/deleteCartItemWhenOrderplace";
 import { GUEST_CART_KEY } from "../helper/guestCart";
+import { calculatePointRedemption } from "../helper/pointRedemption";
 import { trackBasic } from "../helper/trackBasic";
 import updateProductStock from "../helper/updateProductStock";
 import usePurchaseGuidanceEligibility from "../hooks/usePurchaseGuidanceEligibility";
+import { recordOrderPlaced, setUserDetails } from "../store/userSlice";
+import { ensureDeviceId } from "../utils/deviceId";
 
 const PLACEHOLDER_COLOR = "#999";
 // payment gat way server coast etc
@@ -41,7 +45,8 @@ const normalizeBangladeshiPhone = (value = "") => {
 
 const CheckoutPage = () => {
   const navigation = useNavigation();
-  const { fetchUserAddToCart } = useContext(Context);
+  const dispatch = useDispatch();
+  const { fetchUserAddToCart, fetchUserDetails } = useContext(Context);
   const route = useRoute();
   const selectedItems = route.params?.selectedItemsDetails || [];
 
@@ -49,11 +54,13 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [pointsAppliedUserId, setPointsAppliedUserId] = useState(null);
 
   // ⏳ submit locking
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitLockRef = useRef(false); // extra guard against rapid taps
   const user = useSelector((state) => state?.userState?.user);
+  const userRefreshVersionRef = useRef(0);
 
   const showPurchaseGuidance = usePurchaseGuidanceEligibility(user?._id);
 
@@ -78,7 +85,7 @@ const CheckoutPage = () => {
 
   // ✅ delivery option: "FREE" | "EXPRESS" | "NAR120" | "STD"
   //  - STD: standard delivery outside the Narayanganj premium/express options
-  const [deliveryOption, setDeliveryOption] = useState("FREE");
+  const [chosenDeliveryOption, setDeliveryOption] = useState(null);
   const [userTouchedDelivery, setUserTouchedDelivery] = useState(false);
 
   // ✅ payment option (for now only COD)
@@ -88,12 +95,19 @@ const CheckoutPage = () => {
 
   // Prefill shipping if available (now also accept saved upazila if backend sends it)
   useEffect(() => {
+    let active = true;
+    const refreshVersion = userRefreshVersionRef.current;
     (async () => {
       try {
         const res = await axios.get(SummaryApi.current_user.url, {
           withCredentials: true,
         });
-        const ship = res?.data?.data?.shipping;
+        if (!active || userRefreshVersionRef.current !== refreshVersion) return;
+        const currentUser = res?.data?.data;
+        if (res?.data?.success && currentUser?._id === user?._id) {
+          dispatch(setUserDetails(currentUser));
+        }
+        const ship = currentUser?.shipping;
         if (ship) {
           setFormData((prev) => ({
             ...prev,
@@ -108,7 +122,10 @@ const CheckoutPage = () => {
         /* ignore */
       }
     })();
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [dispatch, user?._id]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -124,7 +141,7 @@ const CheckoutPage = () => {
 
   const baseTotal = useMemo(() => {
     return selectedItems.reduce((acc, item) => {
-      const price = item.selling || item?.productId?.selling;
+      const price = item.selling ?? item?.productId?.selling ?? 0;
       return acc + price * item.quantity;
     }, 0);
   }, [selectedItems]);
@@ -150,16 +167,14 @@ const CheckoutPage = () => {
     ? Math.max(0, currentThreshold - baseTotal)
     : 0;
 
-  useEffect(() => {
-    if (!formData.district) return;
-
-    if (formData.district === "Narayanganj") {
-      setDeliveryOption(premiumMinimumEligible ? "FREE" : "NAR70");
-      return;
-    }
-
-    setDeliveryOption("STD");
-  }, [formData.district, premiumMinimumEligible]);
+  const deliveryOption =
+    formData.district !== "Narayanganj"
+      ? "STD"
+      : chosenDeliveryOption === "EXPRESS" || chosenDeliveryOption === "NAR70"
+        ? chosenDeliveryOption
+        : premiumMinimumEligible
+          ? "FREE"
+          : "NAR70";
 
   const computeDeliveryCharge = (district, option) => {
     if (district === "Narayanganj") {
@@ -175,8 +190,18 @@ const CheckoutPage = () => {
     deliveryOption,
   );
 
-  const Subtotal =
-    baseTotal + deliveryCharge + handlingCharge + PROCESSING_FEE - discount;
+  const pointRedemption = calculatePointRedemption({
+    items: selectedItems,
+    user,
+    redemption: commonInfo[0]?.redemption,
+    couponDiscount: discount,
+  });
+  const pointsApplied = Boolean(user?._id && pointsAppliedUserId === user._id);
+  const usedPoint = pointsApplied ? pointRedemption.maxUsablePoints : 0;
+  const Subtotal = Math.max(
+    0,
+    baseTotal + deliveryCharge - discount - usedPoint,
+  );
 
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -237,7 +262,7 @@ const CheckoutPage = () => {
         productId: item.productId._id,
         productName: item?.productName || item.productId.productName,
         quantity: item.quantity,
-        price: (item?.selling || item?.productId?.selling) * item.quantity,
+        price: (item?.selling ?? item?.productId?.selling ?? 0) * item.quantity,
         size: item.size,
         color: item.color,
         image: item.image,
@@ -251,7 +276,7 @@ const CheckoutPage = () => {
       navigation.navigate("Signup");
       return;
     }
-    if (isSubmitting || submitLockRef.current) return;
+    if (isSubmitting || isModalVisible || submitLockRef.current) return;
 
     const { name, phone, address, district, upazila } = formData;
     const newErrors = {};
@@ -274,6 +299,7 @@ const CheckoutPage = () => {
     submitLockRef.current = true;
 
     try {
+      const deviceId = await ensureDeviceId();
       const deliveryTimeline =
         deliveryOption === "EXPRESS" ? "Express" : "Normal";
 
@@ -286,6 +312,9 @@ const CheckoutPage = () => {
         totalAmount: Subtotal,
         discount,
         couponCode,
+        clientPlatform: Platform.OS,
+        deviceId,
+        usedPoint,
       };
 
       const response = await axios.post(SummaryApi.orders.url, orderPayload, {
@@ -294,6 +323,14 @@ const CheckoutPage = () => {
       });
 
       if (response?.data?.success) {
+        // A details request started before this order must not restore an old
+        // balance or first-order status after the server has accepted it.
+        userRefreshVersionRef.current += 1;
+        dispatch(recordOrderPlaced({ userId: user._id, usedPoint }));
+        setPointsAppliedUserId(null);
+        // Refresh the server's canonical balance without undoing a placed order
+        // if the follow-up request is temporarily unavailable.
+        void fetchUserDetails();
         // shipping update
         await upsertUserShipping();
 
@@ -339,10 +376,31 @@ const CheckoutPage = () => {
         await handleRemove(idArray);
         setModalVisible(true);
       } else {
-        Toast.show({ type: "error", text1: "Order failed" });
+        Toast.show({
+          type: "error",
+          text1: response?.data?.message || "Order failed",
+        });
       }
     } catch (err) {
-      Toast.show({ type: "error", text1: "Something went wrong" });
+      const errorData = err?.response?.data;
+      if (
+        err?.response?.status === 409 &&
+        errorData?.code === "INSUFFICIENT_POINTS"
+      ) {
+        userRefreshVersionRef.current += 1;
+        setPointsAppliedUserId(null);
+        Alert.alert(
+          "পর্যাপ্ত পয়েন্ট নেই",
+          errorData.message ||
+            "আপনার পর্যাপ্ত পয়েন্ট নাই। বিস্তারিত জানার জন্য যোগাযোগ করুন।",
+        );
+        void fetchUserDetails();
+      } else {
+        Toast.show({
+          type: "error",
+          text1: errorData?.message || "Something went wrong",
+        });
+      }
     } finally {
       setIsSubmitting(false);
       submitLockRef.current = false;
@@ -473,6 +531,8 @@ const CheckoutPage = () => {
             onSelect={(val) => {
               handleInputChange("district", val);
               // reset upazila when district changes
+              // Reset delivery option when district changes
+              setDeliveryOption(null);
               if (formData.upazila) {
                 handleInputChange("upazila", "");
               }
@@ -789,30 +849,88 @@ const CheckoutPage = () => {
           </TouchableOpacity>
         </View>
 
+        {user?._id && pointRedemption.balance > 0 && (
+          <View style={styles.pointsSection}>
+            <View style={styles.pointsHeader}>
+              <Ionicons name="wallet-outline" size={23} color="#047857" />
+              <View style={styles.pointsHeading}>
+                <Text style={styles.pointsTitle}>Use points</Text>
+                <Text style={styles.pointsDescription}>
+                  Available: {pointRedemption.balance} points · 1 point = ৳1
+                </Text>
+              </View>
+            </View>
+            {pointRedemption.maxUsablePoints > 0 ? (
+              <>
+                <Text style={styles.pointsDescription}>
+                  {pointRedemption.percent}% per item · Max{" "}
+                  {pointRedemption.itemLimit} points/item ·{" "}
+                  {pointRedemption.orderLimit} points/order
+                </Text>
+                <Text style={styles.pointsSaving}>
+                  {pointsApplied ? "Applied" : "Use"}{" "}
+                  {pointRedemption.maxUsablePoints} points to save ৳
+                  {pointRedemption.maxUsablePoints}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.pointsDescription}>
+                Points cannot be applied to this order.
+              </Text>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.pointsButton,
+                pointsApplied && styles.pointsButtonApplied,
+                (isSubmitting ||
+                  (!pointsApplied && pointRedemption.maxUsablePoints === 0)) &&
+                  styles.disabledCard,
+              ]}
+              onPress={() =>
+                setPointsAppliedUserId(pointsApplied ? null : user._id)
+              }
+              disabled={
+                isSubmitting ||
+                (!pointsApplied && pointRedemption.maxUsablePoints === 0)
+              }
+              accessibilityRole="button"
+              accessibilityLabel={
+                pointsApplied
+                  ? "Remove points"
+                  : `Apply ${pointRedemption.maxUsablePoints} points`
+              }
+            >
+              <Text style={styles.pointsButtonText}>
+                {pointsApplied ? "Remove points" : "Apply points"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Summary */}
         <View style={styles.summaryBox}>
           <View style={styles.summaryRow}>
             <Text style={styles.labelText}>Item(s) Total</Text>
             <Text style={styles.amountText}>
-              ৳
-              {selectedItems.reduce((acc, item) => {
+              ৳{baseTotal}
+              {/* {selectedItems.reduce((acc, item) => {
                 const original = item.price || item.productId?.price;
                 return acc + original * item.quantity;
-              }, 0)}
+              }, 0)} */}
             </Text>
           </View>
 
-          <View style={styles.summaryRow}>
+          {/* <View style={styles.summaryRow}>
             <Text style={styles.labelText}>Item(s) Discount</Text>
             <Text style={styles.amountText}>
               -৳
               {selectedItems.reduce((acc, item) => {
                 const original = item.price || item.productId?.price;
-                const selling = item.selling || item.productId?.selling;
+                const selling = item.selling ?? item.productId?.selling ?? 0;
                 return acc + (original - selling) * item.quantity;
               }, 0)}
             </Text>
-          </View>
+          </View> */}
 
           <View className="summaryRow" style={styles.summaryRow}>
             <Text style={styles.labelText}>
@@ -839,7 +957,7 @@ const CheckoutPage = () => {
             </View>
           </View>
 
-          <View style={styles.summaryRow}>
+          {/* <View style={styles.summaryRow}>
             <Text style={styles.labelText}>
               Handling Charge(Internal cost±)
             </Text>
@@ -849,9 +967,9 @@ const CheckoutPage = () => {
               <Text style={styles.oldAmount}>৳25</Text>
               <Text style={styles.amountText}>৳{handlingCharge}</Text>
             </View>
-          </View>
+          </View> */}
 
-          <View style={styles.summaryRow}>
+          {/* <View style={styles.summaryRow}>
             <Text style={styles.labelText}>
               Processing Fee(server, apps, etc±)
             </Text>
@@ -861,13 +979,24 @@ const CheckoutPage = () => {
               <Text style={styles.oldAmount}>৳9</Text>
               <Text style={styles.amountText}>৳{PROCESSING_FEE}</Text>
             </View>
-          </View>
+          </View> */}
 
           {discount > 0 && (
             <View style={styles.summaryRow}>
               <Text style={[styles.labelText, { color: "green" }]}>Coupon</Text>
               <Text style={[styles.amountText, { color: "green" }]}>
                 -৳{discount}
+              </Text>
+            </View>
+          )}
+
+          {usedPoint > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.labelText, styles.pointsSaving]}>
+                Points used ({usedPoint})
+              </Text>
+              <Text style={[styles.amountText, styles.pointsSaving]}>
+                -৳{usedPoint}
               </Text>
             </View>
           )}
@@ -890,6 +1019,7 @@ const CheckoutPage = () => {
           onPress={handleSubmitOrder}
           activeOpacity={isSubmitting ? 1 : 0.7}
           accessibilityRole="button"
+          disabled={isSubmitting || isModalVisible}
         >
           {isSubmitting ? (
             <View
@@ -1173,6 +1303,29 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
   },
+
+  pointsSection: {
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    borderRadius: 13,
+    backgroundColor: "#f0fdf4",
+    gap: 10,
+  },
+  pointsHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  pointsHeading: { flex: 1 },
+  pointsTitle: { fontSize: 16, fontWeight: "700", color: "#065f46" },
+  pointsDescription: { fontSize: 12, lineHeight: 19, color: "#475569" },
+  pointsSaving: { color: "#047857", fontWeight: "600" },
+  pointsButton: {
+    alignItems: "center",
+    paddingVertical: 11,
+    borderRadius: 8,
+    backgroundColor: "#047857",
+  },
+  pointsButtonApplied: { backgroundColor: "#475569" },
+  pointsButtonText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 
   summaryBox: {
     padding: 16,

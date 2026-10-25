@@ -39,7 +39,7 @@ import ReviewsScreen from "./src/screens/ReviewsScreen";
 
 import { trackBasic } from "./src/helper/trackBasic";
 
-// import * as Clarity from "@microsoft/react-native-clarity";
+import * as Clarity from "@microsoft/react-native-clarity";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SystemUI from "expo-system-ui";
 import { navigationRef } from "./src/common/navigationRef"; // না থাকলে createNavigationContainerRef দিয়ে বানাও
@@ -117,9 +117,9 @@ const AppWrapper = () => {
   }, [user?._id]);
 
   useEffect(() => {
-    // Clarity.initialize("xe1afg8yek", {
-    //   logLevel: Clarity.LogLevel.None,
-    // });
+    Clarity.initialize("xe1afg8yek", {
+      logLevel: Clarity.LogLevel.None,
+    });
 
     trackBasic("visit_app");
     StatusBar.setBarStyle("dark-content");

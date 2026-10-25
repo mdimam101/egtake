@@ -7,7 +7,7 @@
 // - Item action buttons moved UNDER item details
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import LottieView from "lottie-react-native";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -613,6 +613,9 @@ const OrderItemRow = ({
 // ---------- Main Screen ----------
 const ProfilePage = () => {
   const user = useSelector((state) => state.userState.user);
+  const userId = user?._id;
+  const pointBalance =
+    Number.isSafeInteger(user?.point) && user.point >= 0 ? user.point : 0;
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const { cartCountProduct = 0, setCartCountProduct } = useContext(Context);
@@ -643,6 +646,32 @@ const ProfilePage = () => {
   // AI skin care
   // const [skinCareProducts, setSkinCareProducts] = useState([]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      let active = true;
+
+      const refreshUser = async () => {
+        try {
+          const response = await axios.get(SummaryApi.current_user.url, {
+            withCredentials: true,
+          });
+          const currentUser = response.data?.data;
+          if (active && response.data?.success && currentUser?._id === userId) {
+            dispatch(setUserDetails(currentUser));
+          }
+        } catch {
+          // Keep the last known balance when the profile cannot refresh.
+        }
+      };
+
+      void refreshUser();
+      return () => {
+        active = false;
+      };
+    }, [dispatch, userId]),
+  );
+
   // Fetch Orders
   const fetchUserOrders = useCallback(async () => {
     try {
@@ -660,8 +689,8 @@ const ProfilePage = () => {
           })),
         }));
         setOrders(normalized);
-        if (normalized.length > 0) {
-          markUserHasOrder(user?._id);
+        if (normalized.length > 0 && userId) {
+          markUserHasOrder(userId);
         }
       } else {
         Toast.show({
@@ -699,8 +728,14 @@ const ProfilePage = () => {
   // }, [fetchSkinCareProducts]);
 
   useEffect(() => {
-    fetchUserOrders();
-  }, [fetchUserOrders]);
+    if (!userId) return;
+
+    const timer = setTimeout(() => {
+      void fetchUserOrders();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [fetchUserOrders, userId]);
 
   // Filters per tab
   const filteredOrders = useMemo(() => {
@@ -1186,6 +1221,23 @@ const ProfilePage = () => {
               </TouchableOpacity>
             </View>
 
+            {userId && (
+              <View
+                style={styles.pointsCard}
+                accessible
+                accessibilityLabel={`Available points: ${pointBalance}. 1 point equals 1 taka.`}
+              >
+                <View style={styles.pointsIcon}>
+                  <Ionicons name="wallet-outline" size={26} color="#047857" />
+                </View>
+                <View style={styles.pointsInfo}>
+                  <Text style={styles.pointsLabel}>Available points</Text>
+                  <Text style={styles.pointsHint}>1 point = ৳1</Text>
+                </View>
+                <Text style={styles.pointsValue}>{pointBalance}</Text>
+              </View>
+            )}
+
             {/* Stats */}
             <View style={styles.statsRow}>
               <StatPill
@@ -1523,6 +1575,30 @@ const styles = StyleSheet.create({
     backgroundColor: "#EAF3FF",
   },
   editBtnText: { color: "#1976d2", fontWeight: "700", fontSize: 12 },
+
+  pointsCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    borderRadius: 14,
+    backgroundColor: "#f0fdf4",
+    gap: 12,
+  },
+  pointsIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "#dcfce7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pointsInfo: { flex: 1 },
+  pointsLabel: { color: "#065f46", fontSize: 14, fontWeight: "700" },
+  pointsHint: { color: "#475569", fontSize: 12, marginTop: 4 },
+  pointsValue: { color: "#047857", fontSize: 28, fontWeight: "800" },
 
   // Stats
   statsRow: { flexDirection: "row", gap: 10, marginTop: 10 },
